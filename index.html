@@ -40,51 +40,59 @@ And unlike some other PHP template engines, CodelessUi mixes no proprietary synt
 <h3>
 <a id="key-goals" class="anchor" href="#key-goals" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Key Goals</h3>
 
-<p>The idea of CodelessUi development was largely driven by these goals: 
-• Facilitate clean separation of presentation from application code.
-• Stick with the available coding languages – PHP, HTML, CSS - that everyone is used to; do not create a new language or proprietary syntaxes like other template engines do.
-• Offer total control of templates from the backend as if there were no isolation.
-• Make it seamless for programmers and designers to deploy CodelessUi or even to undeploy when they choose to.
-• Achieve the big things without making it a big deal! So make only a few rules for it, and not a whole bunch of documentation.
-• Again, make it as simple as possible.
-• Make it as free to use as possible.</p>
+<p>The idea of CodelessUi development was largely driven by these goals: </p>
+
+<ul>
+<li>Facilitate clean separation of presentation from application code.</li>
+<li>Stick with the available coding languages – PHP, HTML, CSS - that everyone is used to; do not create a new language or proprietary syntaxes like other template engines do.</li>
+<li>Offer total control of templates from the backend as if there were no isolation.</li>
+<li>Make it seamless for programmers and designers to deploy CodelessUi or even to undeploy when they choose to.</li>
+<li>Achieve the big things without making it a big deal! So make only a few rules for it, and not a whole bunch of documentation.</li>
+<li>Again, make it as simple as possible.</li>
+<li>Make it as free to use as possible.</li>
+</ul>
 
 <h3>
 <a id="compare-codelessui-with-other-template-engines" class="anchor" href="#compare-codelessui-with-other-template-engines" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Compare CodelessUi with Other Template Engines</h3>
 
-<p>Smarty is one other engine following the "Separate Programming Code from Presentation" philosophy. In comparison with CodelessUi:
- Smarty has a learning curve owing to its use of a proprietary and non-standard syntaxes and code constructs. But CodelessUi has no such. CodelessUi leverages on your knowledge of PHP, CSS and HTML – languages that are standard
- A Smarty template cannot be used outside of the Smarty template engine. But CodelessUi templates are usable anywhere outside of the CodelessUi machine. This owes to the fact that templates for CodelessUi are no special files but plain markup files like HMTL.
- Smarty attempts to make its own version of native PHP functions available on template files while devoiding one of access to other PHP functions for User Interface manipulations. But CodelessUi takes no such approach. Your full logic for User Interface manipulation stands with all the power of PHP and CodelessUi simply hands you a UI element to manipulate. And every manipulation happens on the backend and not inline with markup.</p>
+<p>Smarty is one other engine following the "Separate Programming Code from Presentation" philosophy. In comparison with CodelessUi:</p>
+
+<ul>
+<li>Smarty has a learning curve owing to its use of a proprietary and non-standard syntaxes and code constructs. But CodelessUi has no such. CodelessUi leverages on your knowledge of PHP, CSS and HTML – languages that are standard</li>
+<li>A Smarty template cannot be used outside of the Smarty template engine. But CodelessUi templates are usable anywhere outside of the CodelessUi machine. This owes to the fact that templates for CodelessUi are no special files but plain markup files like HMTL.</li>
+<li>Smarty attempts to make its own version of native PHP functions available on template files while devoiding one of access to other PHP functions for User Interface manipulations. But CodelessUi takes no such approach. Your full logic for User Interface manipulation stands with all the power of PHP and CodelessUi simply hands you a UI element to manipulate. And every manipulation happens on the backend and not inline with markup.</li>
+</ul>
 
 <h3>
 <a id="codelessui-features" class="anchor" href="#codelessui-features" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>CodelessUi Features</h3>
 
-<p>• Facilitates clean separation of presentation from application code.
-• It tolerates no invalid HMTL markup – owing to its use of PHP DOMDocument.
-• Uses no proprietary syntaxes but leverages on available coding languages – PHP, HTML, CSS.
-• PHP for operation, HTML for templates, CSS-style of element selection (not CSS rules within PHP) to identify UI elements, and everything about XPath query for extended element selectors where CSS selectors runs out. XPath query will allow you to select the unknown parent of a known element whereas CSS selectors have no such feature. Using both on CodelessUi offers you the best of both worlds: the ultra-simple element selectors of CSS and the unlimited ability of XPath query.
-• Offers total control of template elements from the backend as if there were no isolation.
-• Ability to auto-generate UI elements or simply repeat them on the fly and create patterns.
-• Ability to include other local HTML files as subsets of the main template. This helps you add things like header and footer files or other inline template files on the fly.
-• Ability to URL--import elements of other HTML files as subsets or sub-elements in the main template.
-• Ability to decisively remove an element from the current template. You could use this feature where, for example, you do not want your sidebar to show on certain pages.
-• Ability to manipulate attributes.
-• Ability to re-render inserted content that contains HTML markup strings.
-• You could save some markup string from the application’s Content Editor to a database, for example, and then, while assigning this markup string to CodelessUi for display, you could have even other content inserted into respective elements within the markup string.
-• Ability to extend functionality by setting value-handler functions.
-• For example, where you want to join array elements as a single string before rendering, you’ll find the setValueHandler() function handy.
-• Seamless for programmers and designers to deploy or even to undeploy when they choose to.
-• With few lines of code, you’ll be using CodelessUi on your already existing projects. And if you happen to be building one afresh, you’ll enjoy integration made easy with CodelessUi.
-• Intentionally made simple – but offering the full power of PHP on the backend to do just anything PHP can do.
-• Conditional if-elses, string and array functions, do-while loops, for and foreach loops, and every other thing you know about PHP.
-• Given CodelessUi, every Plain HTML template is a plug and play file for any PHP-based application.
-• Free to use, and always will be.</p>
+<ul>
+<li>Facilitates clean separation of presentation from application code.</li>
+<li>It tolerates no invalid HMTL markup – owing to its use of PHP DOMDocument.</li>
+<li>Uses no proprietary syntaxes but leverages on available coding languages – PHP, HTML, CSS.</li>
+<li>PHP for operation, HTML for templates, CSS-style of element selection (not CSS rules within PHP) to identify UI elements, and everything about XPath query for extended element selectors where CSS selectors runs out. XPath query will allow you to select the unknown parent of a known element whereas CSS selectors have no such feature. Using both on CodelessUi offers you the best of both worlds: the ultra-simple element selectors of CSS and the unlimited ability of XPath query.</li>
+<li>Offers total control of template elements from the backend as if there were no isolation.</li>
+<li>Ability to auto-generate UI elements or simply repeat them on the fly and create patterns.</li>
+<li>Ability to include other local HTML files as subsets of the main template. This helps you add things like header and footer files or other inline template files on the fly.</li>
+<li>Ability to URL--import elements of other HTML files as subsets or sub-elements in the main template.</li>
+<li>Ability to decisively remove an element from the current template. You could use this feature where, for example, you do not want your sidebar to show on certain pages.</li>
+<li>Ability to manipulate attributes.</li>
+<li>Ability to re-render inserted content that contains HTML markup strings.</li>
+<li>You could save some markup string from the application’s Content Editor to a database, for example, and then, while assigning this markup string to CodelessUi for display, you could have even other content inserted into respective elements within the markup string.</li>
+<li>Ability to extend functionality by setting value-handler functions.</li>
+<li>For example, where you want to join array elements as a single string before rendering, you’ll find the setValueHandler() function handy.</li>
+<li>Seamless for programmers and designers to deploy or even to undeploy when they choose to.</li>
+<li>With few lines of code, you’ll be using CodelessUi on your already existing projects. And if you happen to be building one afresh, you’ll enjoy integration made easy with CodelessUi.</li>
+<li>Intentionally made simple – but offering the full power of PHP on the backend to do just anything PHP can do.</li>
+<li>Conditional if-elses, string and array functions, do-while loops, for and foreach loops, and every other thing you know about PHP.</li>
+<li>Given CodelessUi, every Plain HTML template is a plug and play file for any PHP-based application.</li>
+<li>Free to use, and always will be.</li>
+</ul>
 
 <h3>
 <a id="support-or-contact" class="anchor" href="#support-or-contact" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Support or Contact</h3>
 
-<p>Having trouble with Pages? Check out our <a href="https://help.github.com/pages">documentation</a> or <a href="https://github.com/contact">contact support</a> and we’ll help you sort it out.</p>
+<p>Oxford Harrison <a href="mailto:ox_harris@yahoo.com">ox_harris@yahoo.com</a>.</p>
         </section>
 
         <footer>
