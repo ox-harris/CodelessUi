@@ -19,7 +19,7 @@
  * @file
  * @package		CodelessUi
  * @author		Oxford Harrison <ox_harris@yahoo.com>
- * @copyright	2016 Ox-Harris Creative
+ * @copyright		2016 Ox-Harris Creative
  * @license		GPL-3.0
  * @version		Release: 1.0.0
  * @link		https://www.facebook.com/CodelessUi/
@@ -32,7 +32,7 @@
 /**
  * Include a brother file
  */
-/* include "CodelessUiNodeList.php"; */
+include "CodelessUiNodeList.php";
 
 
 
@@ -44,7 +44,7 @@
  * Built upon the PHP DOMDocument.
  *
  * @todo	Some regex operations within getElementsBySelector().
- *			Currently, they intentional throw Exception as reminders.
+ *			Currently, they intentionally throw Exceptions as reminders.
  */
 Class CodelessUiMachine
 {
@@ -95,7 +95,7 @@ Class CodelessUiMachine
 	
 	/**
      * A linear array
-	 * of element identifiers and their respective paths to data to be included.
+	 * of element identifiers and their respective paths to data that should be included.
 	 *
      * @var array $includes_stack
 	 *
