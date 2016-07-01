@@ -19,7 +19,7 @@
  * @file
  * @package		CodelessUi
  * @author		Oxford Harrison <ox_harris@yahoo.com>
- * @copyright	2016 Ox-Harris Creative
+ * @copyright		2016 Ox-Harris Creative
  * @license		GPL-3.0
  * @version		Release: 1.0.0
  * @link		https://www.facebook.com/CodelessUi/
@@ -31,8 +31,8 @@
 
 /** 
  * CodelessUiNodeList.
- * Smartly orders a list of DOMNode elements right on the main template,
- * Able to duplicate elements to render extra data items where data items outnumbers number of elements.
+ * Smartly orders a list of DOMNode elements right on the main template.
+ * Able to duplicate elements to render extra data items where data items outnumbers the available number of elements.
  */
  
  Class CodelessUiNodeList
@@ -41,7 +41,7 @@
      * Holds a list of DOMNode elements.
 	 *
 	 * A combination of elements from retrieved DOMNodeList on the container class CodelessUiMachine and any extra ones auto-generated
-	 * to complete the idea number for the current data stack.
+	 * to complete the ideal number for the current data stack.
      *
      * @var array $nodeList
 	 *
@@ -119,7 +119,7 @@
 	/**
      * The remainder after dividing total number of calls list provided with 2. That is, modulo 2 of count calls list.
 	 *
-	 * This will be an offset integer added to second half of the total count of calls list provided.
+	 * This will be the offset integer added to second half of the total count of calls list provided.
      *
      * @var int $num_node_calls_expected
 	 *
@@ -147,7 +147,7 @@
 	 *
 	 * This is obtained from the current state of CodelessUiMachine.
      *
-     * @var string $CodelessUiMachine
+     * @var string $current_repeat_fn
 	 *
 	 * @see __constructor().
 	 *
