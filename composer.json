@@ -1,0 +1,27 @@
+{
+    "name": "CodelessUi/CodelessUi",
+    "type": "library",
+    "description": "CodelessUi - the standards-compliant PHP template engine",
+    "keywords": ["templating","PHP","HTML"],
+    "homepage": "https://www.facebook.com/CodelessUi/",
+    "license": "GPL-3.0",
+    "authors": [
+        {
+            "name": "Oxford Harrison",
+            "email": "ox_harris@yahoo.com"
+        }
+    ],
+    "support": {
+        "https://twitter.com/CodelessUi"
+    },
+    "require": {
+        "php": ">=5.3"
+    },
+    "autoload": {
+        "classmap": [
+            "CodelessUiMachine.php",
+            "CodelessUiNodeList.php"
+        ]
+    }
+
+}
