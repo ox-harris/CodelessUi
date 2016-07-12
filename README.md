@@ -1,6 +1,6 @@
 # CodelessUi - a standards compliant, DOM-based PHP template engine.
 
-It facilitates the separation of presentation code (HTML) from application code (PHP). It helps you associate contents from inside your application to individual elements in a HTML template. You can even do more; it is actually built for anything template.
+CodelessUi is a PHP template engine for HTML. It facilitates the separation of presentation code (HTML) from application code (PHP). It helps you associate contents from inside your application to individual elements in a HTML template. You can even do more; it is actually built for anything template.
 
 Note one difference from other template engines like Twig and Smarty: CodelessUi is not syntax-based; it is DOM-based. This means that there is no syntax to learn - not even one!
 
@@ -8,7 +8,7 @@ Note one difference from other template engines like Twig and Smarty: CodelessUi
 
 ### Samrty - (from smarty.net):
 
-#### The php\
+#### The php
 
   include('Smarty.class.php');
 
@@ -101,13 +101,13 @@ Note one difference from other template engines like Twig and Smarty: CodelessUi
 
 #### The php
 
-  include('CodelessUiMachine.php');
+  include('lib/CodelessUi.php');
 
 ----------------
 
   // create object
 
-  $CodelessUi = new CodelessUiMachine;
+  $CodelessUi = new CodelessUi;
 
 ----------------
 
@@ -188,7 +188,7 @@ Note one difference from other template engines like Twig and Smarty: CodelessUi
 ----------------
   
 ## The similarities
-  * Instantiate with the 'new' keyword - same.
+  * Instantiating with the 'new' keyword - same.
   * Assigning data to named elements in the markup - Smarty: assign(); CodelessUi: assignData().
   * Displaying - Smarty: display(); CodelessUi: render().
 
@@ -197,18 +197,18 @@ Note one difference from other template engines like Twig and Smarty: CodelessUi
 ----------------
 Smarty
 
-  * A smarty template is not a standard HTML file. But a mix of HMTL and Smarty's own tags and syntaxes.
-  * A Smarty template has the extension .tpl. Not .html
-  * You must learn both PHP, HTML and Smarty syntaxes to work with this.
+  * A smarty template is not a standard HTML markup. But a mix of HMTL and Smarty's own tags and syntaxes.
+  * A Smarty template file has the file extension .tpl. Not .html
+  * You must learn both PHP, HTML and Smarty syntaxes to work with smarty.
 
 ----------------
 CodelessUi
 
-  * Any valid HTML markup is a template! Valid means: not foreign syntaxes {}, {{}}, and all the rest! It means: Codeless Marrkup!
-  * Template extension must thus be .html
+  * Use any valid HTML markup is a template! Valid means a markup without foreign syntaxes {}, {{}}, and all the rest! It means: Codeless Markup! Just markup!
+  * Template file extension is rightly .html
   * You've learned PHP and HTML already! And that's all! That's the standard.
-  Furthermore, if you know CSS (HTML's sister), you can even target UI elements by ID (#element), ClassName (.element), Attribute (element[attr]).
-  And if you're a pro, find anything on the UI with xpath query: $CodelessUi->assignData('//parent/child', 'Child Content').
+  Furthermore, if you know CSS (HTML's sister), you can even target UI elements by ID ($CodelessUi->assignData('#element', '...')), ClassName ($CodelessUi->assignData('.element', '...')), Attribute ($CodelessUi->assignData('element[attr]', '...')).
+  And if you're a pro, find anything on the UI with xpath query: $CodelessUi->assignData('xpath://parent/child', '...').
 
 You should by now see the possibilities! See the official docs, and tutorials! 
 
@@ -218,9 +218,9 @@ You should by now see the possibilities! See the official docs, and tutorials!
 ## Installation
   Download CodelessUi if you have not already done so.
 ### Folder Structure
-Extract the CodelessUizip file and you’ll discover the most important folder for use named ‘CodelessUi’.
+Extract the CodelessUi zip file and you’ll discover the most important folder for use named ‘lib’.
 
-This folder contains two .php files: CodelessUiMachine.php and CodelessUiNodeList.php. *This folder and its content are things you SHOULD NOT edit*.
+This folder contains three .php files: CodelessUi.php, CodelessUiDom.php and CodelessUiNodeList.php. *This folder and its content are things you SHOULD NOT edit*.
 
 Move the CodelessUi folder to the frontend directory of your project or anywhere from the root directory of your project – depending on your application’s directory structure. Just make sure your application’s autoloader can pick up the CodelessUiMachine class when called – that’s if your project is bundled with an autoloader. Or simply note down the path to where you decide to put the CodelessUi files so you can manually include this path during setup.
 
@@ -232,15 +232,15 @@ If you just want to test CodelessUi or if your project is nothing more than basi
 
 Then in your app.php:
 
-* Include the CodelessUiMachine class.
+* Include the CodelessUi class.
 
-  Include ‘CodelessUi/CodelessUiMachine.php’;
+  Include ‘CodelessUi/lib/CodelessUi.php’;
 
   If you stored the CodelessUi folder in a different location, your include path would change.
 
 ----------------
 
-  Include ‘path-to-CodelessUi/CodelessUi/CodelessUiMachine.php’;
+  Include ‘path-to-CodelessUi/CodelessUi/lib/CodelessUi.php’;
 
   // Where ‘path-to-CodelessUi’ is your actual path to where you stored CodelessUi
  
@@ -248,9 +248,9 @@ Then in your app.php:
 
 * CodelessUi is now available to our app.php script, so we instantiate it:
 
-  $CodelessUi = new CodelessUiMachine;
+  $CodelessUi = new CodelessUi;
 
-  // The CodelessUiMachine’s __constructor accepts no arguments
+  // The CodelessUi’s __constructor accepts no arguments
 
 ----------------
 
@@ -303,10 +303,10 @@ Then in your app.php:
 
 ----------------
 
-And that’s it! Preview your app.php in a browser and behold CodelessUi first time on your project!
+And that’s it! Preview your app.php in a browser and experience the CodelessUi's simplicity and neatness first time on your project!
 
 # Follow Up
-Visit https://ox-harris.github.io/CodelessUi - we hope to feed valuable info in there.
+Visit https://www.twitter.com/CodelessUi.
 
 And follow CodelessUi on http://www.facebook.com/CodelessUi
 
