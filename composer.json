@@ -21,7 +21,7 @@
     "autoload": {
         "classmap": [
             "lib/CodelessUi.php",
-			"lib/CodelessUiDom.php",
+            "lib/CodelessUiDom.php",
             "lib/CodelessUiNodeList.php"
         ]
     }
