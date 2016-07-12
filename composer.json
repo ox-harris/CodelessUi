@@ -12,15 +12,17 @@
         }
     ],
     "support": {
-        "https://twitter.com/CodelessUi"
+        "https://www.facebook.com/CodelessUi/",
+		"https://www.twitter.com/CodelessUi/"
     },
     "require": {
         "php": ">=5.3"
     },
     "autoload": {
         "classmap": [
-            "CodelessUiMachine.php",
-            "CodelessUiNodeList.php"
+            "lib/CodelessUi.php",
+			"lib/CodelessUiDom.php",
+            "lib/CodelessUiNodeList.php"
         ]
     }
 
