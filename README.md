@@ -1,6 +1,6 @@
 # CodelessUi - a standards compliant, DOM-based PHP template engine.
 
-It facilitates the separation of presentation code (HTML) from application code (PHP). It helps you associate contents from inside your application to individual elements in a HTML template. You can even do more; it is actually built for anything template.
+CodelessUi is a PHP template engine for HTML. It facilitates the separation of presentation code (HTML) from application code (PHP). It helps you associate contents from inside your application to individual elements in a HTML template. You can even do more; it is actually built for anything template.
 
 Note one difference from other template engines like Twig and Smarty: CodelessUi is not syntax-based; it is DOM-based. This means that there is no syntax to learn - not even one!
 
