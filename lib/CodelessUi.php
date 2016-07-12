@@ -36,8 +36,8 @@
  */
 if (!class_exists('CodelessUiDom'))
 {
-     require_once dirname(__FILE__) . '/lib/CodelessUiDom.php';
-     require_once dirname(__FILE__) . '/lib/CodelessUiNodeList.php';
+     require_once dirname(__FILE__) . '/CodelessUiDom.php';
+     require_once dirname(__FILE__) . '/CodelessUiNodeList.php';
 }
 
 
