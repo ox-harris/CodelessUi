@@ -51,6 +51,21 @@ Class CodelessUiDom extends DOMDocument
      * @access private
      */
 	private $xpath;
+	
+	
+	/**
+     * Stores all XPath queries ever run on the DOM. This includes CSS selectors that were converted to XPath.
+     *
+     * @var array $queries
+	 *
+	 * @see getQueries()
+	 * @see getElementsBySelector()
+	 * 
+     * This is used internally
+     *
+     * @access private
+     */
+	private $queries = array();
 
 
 	/**
@@ -174,7 +189,7 @@ Class CodelessUiDom extends DOMDocument
 			}
 
 			// Sanitize string
-			$element_selector = str_replace(array('  ', '::'), array(' ', ':'), $element_selector);
+			$element_selector = str_replace(array('  ', '::'/**/), array(' ', ':'/**/), $element_selector);
 			// Ususally found in attributes...
 			$element_selector = str_replace(array(' = ', '= ', ' ='), '=', $element_selector);
 			
@@ -213,20 +228,21 @@ Class CodelessUiDom extends DOMDocument
 						{
 							if ($psuedo_modifier == 'first-child')
 							{
-								// If the current node is same as its parent's first child
-								//$selector = $this->rewrite($selector).'[is-same-node(/html, /html)]';
-								throw new Exception('The compound CSS :first-child() is not yet supported');
-								$selector = '../child::*[1]['.$this->rewrite($selector).']';
+								// Get first node (relative to parent - not relative to result set, as in first-of-type()),
+								// test that it is self of this selector
+								$selector = '*[1]/self::'.$this->rewrite($selector);
 							}
 							elseif ($psuedo_modifier == 'last-child')
 							{
-								throw new Exception('The compound CSS :last-child() is not yet supported');
-								$selector = '../*[last()]['.$this->rewrite($selector).']';
+								// Get last node (relative to parent - not relative to result set, as in last-of-type()),
+								// test that it is self of this selector
+								$selector = '*[last()]/self::'.$this->rewrite($selector);
 							}
 							elseif ($psuedo_modifier == 'nth-child')
 							{
-								throw new Exception('The compound CSS :nth-child() is not yet supported');
-								$selector = '../*['.(int)$sub_selector.']['.$this->rewrite($selector).']';
+								// Get nth node (relative to parent - not relative to result set, as in nth-of-type()),
+								// test that it is self of this selector
+								$selector = '*['.(int)$sub_selector.']/self::'.$this->rewrite($selector);
 							}
 							
 							elseif ($psuedo_modifier == 'first-of-type')
@@ -256,8 +272,8 @@ Class CodelessUiDom extends DOMDocument
 							}
 							elseif ($psuedo_modifier == 'empty')
 							{
-								throw new Exception('The compound CSS :empty is not yet supported');
-								$selector = $this->rewrite($selector).'[empty(text())]';
+								$selector = $this->rewrite($selector).'[count(*)=0 and not(text())]';
+								//$selector = $this->rewrite($selector).'[count(*)=0 or not(text())]';
 							}
 							/*else
 							{
@@ -274,7 +290,7 @@ Class CodelessUiDom extends DOMDocument
 					}
 					
 					# 2. If no tagname is present, use a wildcard *. So we get *[...].
-					if (substr($selector, 0, 1) == '[')
+					if (substr($selector, 0, 1) === '[')
 					{
 						$selector = '*'.$selector;
 					}
@@ -282,19 +298,20 @@ Class CodelessUiDom extends DOMDocument
 					# 3. Work with relationship_modifiers
 					
 					// Parent > Direct Child
-					if ($relationship_modifier == '>')
+					if ($relationship_modifier === '>')
 					{
 						$selector_build .= '/'.$selector;
 					}
 					// Element + immediate sibling
-					elseif ($relationship_modifier == '+')
+					elseif ($relationship_modifier === '+')
 					{
-						$selector_build .= '/following-sibling::'.$selector;
+						$selector_build .= '/following-sibling::'.$selector.'[1]';
 					}
 					// Element ~ any sibling
-					elseif ($relationship_modifier == '~')
+					elseif ($relationship_modifier === '~')
 					{
-						$selector_build .= '/../'.$selector;
+						$selector_build .= '/following-sibling::'.$selector;
+						//$selector_build .= '/../'.$selector;
 					}
 					else
 					{
@@ -320,20 +337,23 @@ Class CodelessUiDom extends DOMDocument
 			}
 		}
 		
-		echo '>> '.$element_path.$selector_build;
+		$query_string = '>> '.$element_path.'/'.$selector_build;
 		
 		$selector_build = $selector_build."[not(@data-codelessui-no_parse)]";
 		
-		$elements = $this->xpath->query($element_path.$selector_build);
+		$elements = $this->xpath->query($element_path.'/'.$selector_build);
 		
 		if ($elements)
 		{
-			echo ' -> ('.$elements->length.")\r\n";
+			// Save to list
+			$query_string .= ' -> ('.$elements->length.')';
+			$this->queries[] = $query_string;
+			
 			return $elements;
 		}
 		else
 		{
-			throw new Exception('Malformed XPath query: '.$element_path.$selector_build.' !');
+			throw new Exception('Malformed XPath query: '.$element_path.'/'.$selector_build.' !');
 		}
     }
 	
@@ -369,7 +389,8 @@ Class CodelessUiDom extends DOMDocument
 		if (strpos($css_selector, '#') !== false)
 		{
 			// Attr Is Word
-			$css = '/\#(\w+)/i';
+			//$css = '/\#(\w+)/i'; // The (\w+) fails on dash-separated-words
+			$css = '/\#(.*)/i';
 			$xpath = '[@id="$1"]';
 			$css_selector = preg_replace($css, $xpath, $css_selector);
 		}
@@ -377,9 +398,11 @@ Class CodelessUiDom extends DOMDocument
 		if (strpos($css_selector, '.') !== false)
 		{
 			// Attr Contains Word
-			$css = '/\.(\w+)/i';
+			//$css = '/\.(\w+)/i'; // The (\w+) fails on dash-separated-words
+			$css = '/\.(.*)/i';
 			$xpath = '[contains(concat(" ", @class, " "), " $1 ")]';
 			$css_selector = preg_replace($css, $xpath, $css_selector);
+			/// Consider doing normalize-space(@class)
 		}
 		// Complex Attribute
 		if (strpos($css_selector, '[') !== false && strpos($css_selector, ']') !== false && strpos($css_selector, '=') !== false)
@@ -433,11 +456,22 @@ Class CodelessUiDom extends DOMDocument
 	
 	
 	/**
+     * Returns all XPath queries ever run on the DOM. This includes CSS selectors that were converted to XPath.
+     *
+     * @return array
+     */
+	public function getQueries()
+	{
+		return implode("\r\n", $this->queries);
+	}
+	
+	
+	/**
      * Duplicate an element in the main document. Mainly used to complete calls_list
      *
      * @param DOMNode 	$node 						A DOMNode element.
 	 * @param string 	$insert_duplicate_as 		Specifies how to place the duplicated element relative to its source.
-	 * @param bool 		$insert_before 				The numeric key location of an item in list before which to add this.
+	 * @param bool 		$insert_before 				The numeric key location of an item in list before which to add this newly duplicated $node.
      * 
 	 * @return void
      */
@@ -447,87 +481,31 @@ Class CodelessUiDom extends DOMDocument
 		if ($insert_duplicate_as == 'sub_child')
 		{
 			$parent = $node;
-			if ($node->ownerDocument->formatOutput)
-			{
-				if (is_object($node->firstChild))
-				{
-					$value = !empty($node->firstChild->nodeValue) && empty(trim($node->firstChild->nodeValue)) ? $node->firstChild->nodeValue : "\r\n";
-					$beforeNode = $this->createTextNode($value);
-				}
-				if (is_object($node->lastChild))
-				{
-					$afterNode = $this->createTextNode((!empty($node->lastChild->nodeValue) && empty(trim($node->lastChild->nodeValue)) && $node->lastChild->nodeValue !== $value ? $node->lastChild->nodeValue : "\t"));
-				}
-			}
 		}
-		else
+		elseif ($insert_before === false/*DON'T RUN THIS BLOCK EVEN WITH NULL... NULL MEANS THERE WAS AN ATTEPT TO PROVIDE THE RIGHT $insert_before*/ && !empty($node->nextSibling))
 		{
-			if ($insert_duplicate_as == 'immediate_sibling' && !$insert_before)
-			{
-				// Insert an anchor immediately before the first element to be duplicated
-				// We will be placing things right before this anchor. Which automatically is after the first element duplicated
-				// Placing an element befored this anchor will push the anchor forward... and so on
-				if (!isset($insert_before))
-				{
-					$insert_before = $this->createTextNode("\r\n");
-					$parent->insertBefore($insert_before, $node->nextSibling);
-				}
-			}
-
-			if ($node->ownerDocument->formatOutput)
-			{
-				if (is_object($node->previousSibling))
-				{
-					$value = !empty($node->previousSibling->nodeValue) && empty(trim($node->previousSibling->nodeValue)) ? $node->previousSibling->nodeValue : "\r\n";
-					$beforeNode = $this->createTextNode($value);
-				}
-				if (is_object($node->nextSibling))
-				{
-					/*if ($node->nextSibling->nodeName == "#comment" || ($node->nextSibling->nodeName == "#text" && empty(trim($node->nextSibling->nodeValue))))
-					{
-						$afterNode = $node->nextSibling->cloneNode();
-					}*/
-					$value = !empty($node->nextSibling->nodeValue) && empty(trim($node->nextSibling->nodeValue)) ? $node->nextSibling->nodeValue : "\r\n";
-					$afterNode = $this->createTextNode((!empty($node->nextSibling->nodeValue) && empty(trim($node->nextSibling->nodeValue)) && $node->nextSibling->nodeValue !== $value ? $node->nextSibling->nodeValue : "\t"));
-				}
-			}
+			$insert_before = $node->nextSibling;
 		}
 		
-		// Copy leading & lagging space or newline
-		if (!empty($beforeNode))
-		{
-			if ($insert_before)
-			{
-				$parent->insertBefore($beforeNode, $insert_before);
-			}
-			else
-			{
-				$parent->appendChild($beforeNode);
-			}
-		}
-		
-		// Copy the main node
+		// Copy and insert the main node
 		$node_copy = $node->cloneNode(true);
+		
 		if ($insert_before)
 		{
+			// Insert $node_copy
 			$parent->insertBefore($node_copy, $insert_before);
 		}
 		else
 		{
+			// Insert $node_copy as last child
 			$parent->appendChild($node_copy);
 		}
 		
-		// Also copy trailing space or newline
-		if (!empty($afterNode))
+		// See if we can first add a contextual line break or space. Not always the case anyways
+		if ($this->formatOutput && is_object($parent->firstChild) && $parent->firstChild->nodeName == '#text' && is_null(trim($parent->firstChild->nodeValue)))
 		{
-			if ($insert_before)
-			{
-				$parent->insertBefore($afterNode, $insert_before);
-			}
-			else
-			{
-				$parent->appendChild($afterNode);
-			}
+			$white_space = $parent->firstChild->cloneNode(true);
+			$parent->insertBefore($white_space, $node_copy);
 		}
 		
 		return $node_copy;
@@ -560,18 +538,23 @@ Class CodelessUiDom extends DOMDocument
 	{
 		if (!empty($element_selector))
 		{
-			$markup_strings = array();
-			
-			$elements = $this->getElementsBySelector($element_selector);
-			if ($elements)
+			if (is_string($element_selector))
 			{
-				foreach($elements as $element)
+				$markup_strings = array();
+				
+				$elements = $this->getElementsBySelector($element_selector);
+				if ($elements)
 				{
-					$markup_strings[] = parent::saveHTML($element);
+					foreach($elements as $element)
+					{
+						$markup_strings[] = parent::saveHTML($element);
+					}
 				}
+				
+				return implode(($this->formatOutput ? "\r\n" : ""), $markup_strings);
 			}
 			
-			return implode(($this->formatOutput ? "\r\n" : ""), $markup_strings);
+			return parent::saveHTML($element_selector);
 		}
 		
 		return parent::saveHTML();
