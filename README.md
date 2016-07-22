@@ -1,10 +1,17 @@
-# CodelessUi - a standards compliant, DOM-based PHP template engine.
+# CodelessUi - standards compliant, template engine for PHP.
 
-CodelessUi is a PHP template engine for HTML. It facilitates the separation of presentation code (HTML) from application code (PHP). It helps you associate contents from inside your application to individual elements in a HTML template. You can even do more; it is actually built for anything template.
 
-Note one difference from other template engines like Twig and Smarty: CodelessUi is not syntax-based; it is DOM-based. This means that there is no syntax to learn - not even one!
 
-## Consider an example - and compare
+CodelessUi is a fully-featured template engine for PHP.
+It facilitates the globally-held standard of code separation in application building.
+It helps you dynamically render application content on templates without mixing application codes (PHP) with presentation codes (HTML).
+
+  *  This code separation brings about cleaner and more maintainable code - the same reason why you do not mix CSS styles with HTML.
+  *  And on the critical side, you avoid all the security issues associated with using PHP codes on HTML templates.
+
+Furthermore, CodelessUi brings all the ease and fun to your code, and a whole lot of new possibilities!
+
+Compare CodelessUi with Smarty
 
 ### Samrty - (from smarty.net):
 
@@ -101,7 +108,7 @@ Note one difference from other template engines like Twig and Smarty: CodelessUi
 
 #### The php
 
-  include('lib/CodelessUi.php');
+  include('CodelessUi/lib/CodelessUi.php');
 
 ----------------
 
@@ -117,9 +124,9 @@ Note one difference from other template engines like Twig and Smarty: CodelessUi
 
   // values for the purpose of this example.
 
-  $CodelessUi->assignData('#name::after', 'george smith');
+  $CodelessUi->assign('#name::after', 'george smith');
 
-  $CodelessUi->assignData('#address::after', '45th & Harris');
+  $CodelessUi->assign('#address::after', '45th & Harris');
 
 ----------------
 
@@ -189,7 +196,7 @@ Note one difference from other template engines like Twig and Smarty: CodelessUi
   
 ## The similarities
   * Instantiating with the 'new' keyword - same.
-  * Assigning data to named elements in the markup - Smarty: assign(); CodelessUi: assignData().
+  * Assigning data to named elements in the markup - same.
   * Displaying - Smarty: display(); CodelessUi: render().
 
 ## The differences - lest you think they're the same all the way:
@@ -197,18 +204,18 @@ Note one difference from other template engines like Twig and Smarty: CodelessUi
 ----------------
 Smarty
 
-  * A smarty template is not a standard HTML markup. But a mix of HMTL and Smarty's own tags and syntaxes.
-  * A Smarty template file has the file extension .tpl. Not .html
-  * You must learn both PHP, HTML and Smarty syntaxes to work with smarty.
+  * A smarty template is not a standard HTML markup. But a mix of HTML and Smarty's own tags and syntaxes.
+  * A Smarty template file has the file extension .tpl. not .html
+  * You must learn PHP, HTML and Smarty syntaxes to work with Smarty.
 
 ----------------
 CodelessUi
 
-  * Use any valid HTML markup is a template! Valid means a markup without foreign syntaxes {}, {{}}, and all the rest! It means: Codeless Markup! Just markup!
+  * Any valid HTML markup is a template! And valid HTML markup is valid anywhere - with or without the CodelessUi Engine!
   * Template file extension is rightly .html
-  * You've learned PHP and HTML already! And that's all! That's the standard.
-  Furthermore, if you know CSS (HTML's sister), you can even target UI elements by ID ($CodelessUi->assignData('#element', '...')), ClassName ($CodelessUi->assignData('.element', '...')), Attribute ($CodelessUi->assignData('element[attr]', '...')).
-  And if you're a pro, find anything on the UI with xpath query: $CodelessUi->assignData('xpath://parent/child', '...').
+  * You've learned PHP and HTML already! And that's all! That's the standard. CodelessUi requires no other language.
+  Furthermore, if you know CSS, you can even target template elements by id ($CodelessUi->assign('#element', '...')), ClassName ($CodelessUi->assign('.element', '...')), Attribute ($CodelessUi->assign('element[attr]', '...')).
+  And if you're a pro, find anything on the UI with xpath query: $CodelessUi->assign('xpath:parent/child', '...').
 
 You should by now see the possibilities! See the official docs, and tutorials! 
 
@@ -220,11 +227,12 @@ You should by now see the possibilities! See the official docs, and tutorials!
 ### Folder Structure
 Extract the CodelessUi zip file and you’ll discover the most important folder for use named ‘lib’.
 
-This folder contains three .php files: CodelessUi.php, CodelessUiDom.php and CodelessUiNodeList.php. *This folder and its content are things you SHOULD NOT edit*.
+This folder contains the core working files. *This folder and its content are things you SHOULD NOT edit*.
 
-Move the CodelessUi folder to the frontend directory of your project or anywhere from the root directory of your project – depending on your application’s directory structure. Just make sure your application’s autoloader can pick up the CodelessUiMachine class when called – that’s if your project is bundled with an autoloader. Or simply note down the path to where you decide to put the CodelessUi files so you can manually include this path during setup.
+Move the CodelessUi folder to the frontend directory of your project or anywhere from the root directory of your project – depending on your application’s directory structure. Just make sure your application’s autoloader can pick up the CodelessUi class when called – that’s if your project is bundled with an autoloader. Or simply note down the path to where you decide to put the CodelessUi files so you can manually include this path during setup.
 
 # Test
+To see if CodelessUi is available for use, use CodelessUi::info(). This should show a few lines of info.
 If you just want to test CodelessUi or if your project is nothing more than basic, here is a test-case setup in numbered steps.
 * Create a new php file named ‘app.php’ – just the name for this example.
 * Copy the CodelessUi folder to the same directory as the app.php file.
@@ -269,7 +277,7 @@ Then in your app.php:
 
 ----------------
 
-* Now we can start assigning content to the respective elements in the template using CodelessUi’sassignData() function
+* Now we can start assigning content to the respective elements in the template using CodelessUi’s assign() function
 
   The function accepts to parameters:
 
@@ -281,19 +289,19 @@ Then in your app.php:
 
   // For document title (title)
 
-  $CodelessUi->assignData(‘title’, ‘This is document title’);
+  $CodelessUi->assign(‘title’, ‘This is document title’);
 
 ----------------
 
   // For page heading 1 (h1)
 
-  $CodelessUi->assignData(‘h1’, ‘Hello World!’);
+  $CodelessUi->assign(‘h1’, ‘Hello World!’);
 
 ----------------
 
   // For page paragraph (p)
 
-  $CodelessUi->assignData(‘p’, ‘Here is my first CodelessUi project’);
+  $CodelessUi->assign(‘p’, ‘Here is my first CodelessUi project’);
 
 ----------------
 
@@ -313,15 +321,6 @@ And follow CodelessUi on http://www.facebook.com/CodelessUi
 # Authors
   Oxford Harrison <ox_harris@yahoo.com>
   
-## Acknowledgments
-
-Thanks for being around:
-
-Ademola Adekunbi
-
-Ezra Bassey
-
-Daniel Okorie
 
 # License
 See the LICENSE.md file for details
