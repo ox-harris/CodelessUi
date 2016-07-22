@@ -178,16 +178,17 @@
 	 * @param array 	$element_selectors 			A list of element selectors provided by CodelessUi.
      * @param DOMNode 	$source_element 			A DOMNode element from which to source elements for the population.
      * @param bool	 	$repeat_fn		 			The repeat function to use.
-     * @param bool	 	$switch_population_target	Sets whether to populate data on element itself or child elements.
+     * @param bool	 	$self_repeat				Sets whether to fill up nodeList with repeatitions of $source_element itself or child elements.
      * 
 	 * @see				CodelessUi::setElementData().
 	 *
 	 * @return void
      */
-	public function __construct(array $element_selectors, $source_element, $repeat_fn = null, $switch_population_target = false)
+	public function __construct(array $element_selectors, $source_element, $repeat_fn = null, $self_repeat = false)
 	{
 		// Initially available elements have been populated.
 		$this->repeat_fn = $repeat_fn;
+		$this->self_repeat = $self_repeat;
 														
 		// Set these before any duplication begins... may be needed
 		$this->element_selectors = $element_selectors;
@@ -196,9 +197,10 @@
 		if ($this->ownerDocument)
 		{
 			# 1. Attempt to populate nodeList
-			# Default action is to populate children, but if switch_population_element is set, find the element for the later repeat
+			// Default is to fill up nodeList with elements corresponding to items in $element_selectors - children of $source_element
+			// But if $self_repeat is true, fill up nodeList with repeatitions of $source_element.
 			
-			if (!$switch_population_target)
+			if (!$this->self_repeat)
 			{
 				if (is_string($element_selectors[0]))
 				{
@@ -239,19 +241,18 @@
 						$node = $this->ownerDocument->duplicateNode($source_element, 'sub_child');
 						$this->addToNodeList(array($node));
 					}
-					
-					# 3. If number of items populated is smaller than expected number of calls, then we fill the list up
-					$this->completeNodeList();
 				}
 				
+				// In case number of items populated is smaller than expected number of calls, then we fill the list up
+				$this->completeNodeList();
 			}
-			elseif ($switch_population_target && !empty($source_element))
+			else
 			{
-				# A. This element does not want to populate its children.
-				# Then we populate itself
+				// Repeat self
+				// This element does not want to populate its children.
 				$this->addToNodeList(array($source_element));
 				
-				# 2. If number of items populated is smaller than expected number of calls, then we fill the list up
+				// In case number of items populated is smaller than expected number of calls, then we fill the list up
 				$this->completeNodeList();
 			}
 		}
@@ -311,15 +312,15 @@
 		$this->half_num_nodes_found = round($this->num_nodes_found / 2);
 		$this->half_num_nodes_found_offset = ($this->half_num_nodes_found * 2 < $this->num_nodes_found ? 1 : ($this->half_num_nodes_found * 2 > $this->num_nodes_found ? -1 : 0));
 		
-		if ($this->num_nodes_found < $this->num_node_calls_expected)
+		if ($this->num_nodes_found < $this->num_node_calls_expected && !empty($this->repeat_fn))
 		{
 			$cursor = null;
 			$last_cursor_move = null;
 			
 			for($current_node_key = $this->num_nodes_found; $current_node_key < $this->num_node_calls_expected; $current_node_key ++)
 			{
-				// Initialize this flag
-				$insert_before = false;
+				// The default
+				$duplicate_node_relative_placement = 'after';
 				
 				// The cursor movement
 				// Increment or decrement the cursor
@@ -397,23 +398,27 @@
 						$middle_point --;
 					}
 					
+					// $cursor changes
 					$cursor = $middle_point;
-					$insert_before = true;
+					// $duplicate_node_relative_placement changes
+					$duplicate_node_relative_placement = 'before';
 				}
 				
-				// Add a duplicate of this node
+				// The node to be duplicated
 				$node = $this->nodeList[$cursor][0]/*Has been a single node in array*/;
-
-				if ($insert_before)
+				// Where to place it
+				if ($duplicate_node_relative_placement === 'before')
 				{
-					// Tear $this->nodeList into halves, do $this->ownerDocument->duplicateNode-> with insert before, then join $this->nodeList back
-					$duplicate = $this->ownerDocument->duplicateNode($node, false, $node);
-					$this->addToNodeList(array($duplicate), $cursor);
+					$insert_before = $node;
 				}
-				else
+				elseif ($duplicate_node_relative_placement === 'after')
 				{
-					$this->addToNodeList(array($this->ownerDocument->duplicateNode($node)));
+					$last_element_in_node_list = end($this->nodeList);
+					$insert_before = is_object($last_element_in_node_list[0]) ? $last_element_in_node_list[0]->nextSibling : null;
 				}
+				
+				$duplicate = $this->ownerDocument->duplicateNode($node, 'immediate_sibling', $insert_before);
+				$this->addToNodeList(array($duplicate), $cursor);
 			}
 			
 			/* Nodes have been populated... Apply other Fns: Justify or Shuffle */
