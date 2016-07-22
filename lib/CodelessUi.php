@@ -58,6 +58,28 @@ if (!class_exists('CodelessUiDom'))
 Class CodelessUi
 {
 	/**
+     * Holds the current CodelessUi version.
+     *
+     * @var string $version
+	 *
+	 * This is used internally. But readonly via magic __get()
+	 *
+	 * @access private
+     */
+	private static $version = '1.0.1';
+	
+	/**
+     * Holds the mininum required PHP version.
+     *
+     * @var string $min_php_version
+	 *
+	 * This is used internally. But readonly via magic __get()
+	 *
+	 * @access private
+     */
+	private static $min_php_version = '5.3.0';
+	
+	/**
      * Holds an array of element selectors with their respective handlers.
      *
      * @var array $value_modifiers
@@ -76,9 +98,9 @@ Class CodelessUi
      *
      * @var array $data_stack
 	 *
-	 * @see assignData().
+	 * @see assign().
 	 * @see obtainData().
-	 * @see processRender().
+	 * @see renderTemplate().
 	 *
      * This is used internally. But readonly via obtainData() or magic __get()
      *
@@ -93,7 +115,7 @@ Class CodelessUi
      * @var array $includes_stack
 	 *
 	 * @see setInclude().
-	 * @see assignData().
+	 * @see assign().
 	 * @see processAllIncludes().
 	 *
      * This is used internally. But readonly via magic __get()
@@ -109,12 +131,8 @@ Class CodelessUi
 	 *
 	 * @see setTemplate()
 	 * @see __destruct()
-	 * 
-     * This is used internally. But readonly via magic __get()
-     *
-     * @access private
      */
-    private $CodelessUiDom;
+    public $CodelessUiDom;
 
 
 	/**
@@ -183,12 +201,12 @@ Class CodelessUi
 	 * Reparse usually happens when CodelessUi::$parse_inserted_data is set to true.
 	 * On reparse, CodelessUi skips already parsed elements (because it is able to recognize them), but looks
 	 * out for new elements that were inserted into the template on the previous
-	 * processRender() operation, which are now part of the whole CodelessUiDom, and which have data assigned to them on CodelessUi::$data_stack.
+	 * renderTemplate() operation, which are now part of the whole CodelessUiDom, and which have data assigned to them on CodelessUi::$data_stack.
      *
      * @var bool $on_reparse
 	 *
 	 * @see CodelessUi::$parse_inserted_data
-	 * @see processRender()
+	 * @see renderTemplate()
 	 *
      * This is used internally. But readonly via magic __get()
      *
@@ -200,7 +218,7 @@ Class CodelessUi
      * A status flag set by the parser indicating whether or not render() has be called on this document.
 	 * getRendered() will needs this flag.
      *
-     * @var bool $is_rendered
+     * @var bool $is_template_rendered
 	 *
 	 * @see render()
 	 *
@@ -210,7 +228,7 @@ Class CodelessUi
 	 *
      * @access public
      */
-	public $is_rendered = false;
+	public $is_template_rendered = false;
 	
 	/**
      * A configuration property set to tell CodelessUi what to do to an element when
@@ -250,22 +268,6 @@ Class CodelessUi
      */
 	public $parse_inserted_data = false;
 
-	/**
-     * A configuration property that tells CodelessUi whether to automatically echo output with a call to render().
-     *
-     * @var bool $auto_print_output_on_render
-	 *
-	 * @see render()
-	 * 
-	 * This property will not change until a major release.
-	 *
-	 * @api
-	 *
-     * @access public
-     */
-	public $auto_print_output_on_render = true;
-
-
 
 
 
@@ -290,10 +292,10 @@ Class CodelessUi
      */
 	public function __construct()
 	{
-		//Check the application's minimum supported PHP version. (5.2.7)
-		if (version_compare(PHP_VERSION, '5.2.7', '<'))
+		//Check the application's minimum supported PHP version.
+		if (version_compare(PHP_VERSION, self::$min_php_version, '<'))
 		{
-			die('You need to use PHP 5.2.7 or higher to run this version of CodelessUi!');
+			die('You need to use PHP '.self::$min_php_version.' or higher to run this version of CodelessUi!');
 		}
     }
 
@@ -329,6 +331,20 @@ Class CodelessUi
 		throw new Exception('Property '.$param_name.' not found! It must be undeclared!');
     }
 	
+	/**
+     * Gives information about the current installation of CodelessUi.
+     *
+	 * @api
+     * 
+	 * @return void
+     */
+    public static function info()
+	{
+		echo 'CodelessUi - v'.self::$version."<br />\r\n";
+		echo 'Current PHP version - v'.PHP_VERSION."<br />\r\n";
+		echo 'Min PHP version - v'.self::$min_php_version."<br />\r\n";
+    }
+	
 	
 	
 	/*
@@ -342,13 +358,13 @@ Class CodelessUi
 	/**
      * Give CodelessUi a template to use for rendering.
      *
-     * Ok to have used the assignData() method before calling this.
+     * Ok to have used the assign() method before calling this.
 	 * But be sure that setTemplate() has been called before the render() method;
 	 * this makes the template available for render()
      * 
      * @param string	$template A valid HTML markup string, or a relative or absolute path to a HTML file
 	 *
-	 * @see CodelessUi::assignData()
+	 * @see CodelessUi::assign()
 	 * @see CodelessUi::render()
 	 *
 	 * This method will not change until a major release.
@@ -363,8 +379,12 @@ Class CodelessUi
 	public function setTemplate($template)
 	{
 		// Loads the CodelessUiDom 
-		$doc = new CodelessUiDom(); 
+		$doc = new CodelessUiDom('1.0', 'UTF-8'); 
 		$doc->formatOutput = $this->allow_html_formatting;
+		
+		//$doc->preserveWhiteSpace = false;
+		//$doc->recover = true;
+		$doc->substituteEntities = false;
 		
 		// Suppress errors 
 		libxml_use_internal_errors(true);
@@ -392,11 +412,8 @@ Class CodelessUi
 			throw new Exception("No HTML data provided!"); 
 		}
 	
-		$this->CodelessUiDom = $doc; 
-		$this->CodelessUiDom->normalizeDocument();
-		
-		// xpath handle on this document
-		$this->xpath = new DOMXpath($this->CodelessUiDom);
+		$this->CodelessUiDom = $doc;
+		$this->is_template_rendered = false; 
 	}
 	
 
@@ -419,7 +436,7 @@ Class CodelessUi
 	 *
 	 * @return	self							For method chaining
      */
-	public function assignData($element_selector, $data, $replace = true, $recurse = true, $is_include_path = false)
+	public function assign($element_selector, $data, $replace = true, $recurse = true, $is_include_path = false)
 	{
 		$data_stack = $is_include_path ? 'includes_stack' : 'data_stack';
 		
@@ -451,7 +468,18 @@ Class CodelessUi
 	
 	
 
-
+	/**
+	 * Alias of CodelessUi::assign().
+	 *
+	 * @depreciated
+	 */
+	public function assignData($element_selector, $data, $replace = true, $recurse = true, $is_include_path = false)
+	{
+		return $this->assign($element_selector, $data, $replace, $recurse, $is_include_path);
+	}
+	
+	
+	
 	/**
      * Assign whole data to CodelessUi.
      *
@@ -466,7 +494,7 @@ Class CodelessUi
 	 *
 	 * @return	self							For method chaining
      */
-	public function assignDataStack($data_stack)
+	public function assignStack($data_stack)
 	{
 		$this->data_stack = $data_stack;
 		
@@ -498,12 +526,12 @@ Class CodelessUi
 	 *
 	 * @api
 	 *
-	 * @uses	CodelessUi::assignData()
+	 * @uses	CodelessUi::assign()
 	 * @return	self							For method chaining
      */
 	public function setInclude($element_selector, $data, $replace = true, $recurse = true)
 	{
-		return $this->assignData($element_selector, $data, $replace, $recurse, true);
+		return $this->assign($element_selector, $data, $replace, $recurse, true);
 	}
 	
 	
@@ -688,13 +716,12 @@ Class CodelessUi
 	
 	
 	/**
-     * Insert content into an element - content encountered while looping within processRender().
+     * Insert content into an element - content encountered while looping within renderTemplate().
 	 *
      * @param DOMNode	$element					An instance of DOMNode representing the element.
      * @param string	$data_value					Data to be inserted.
      * @param string	$value_insert_fn			A flag to either replace element's already existing data, to prepend or append it.
      * @param array		$sub_runtime_props			List of insertion settings compiled for this element.
-     * @param bool		$switch_population_target	Parameter to be transfered to CodelessUiNodeList::populateNodeList().
 	 *
 	 * @see CodelessUiNodeList::populateNodeList()
 	 *
@@ -704,115 +731,166 @@ Class CodelessUi
 	 *
 	 * @return	null|DOMNode				Null on error. The originally provided DOMNode on success.
      */
-	private function elemSetContent($element, $data_value, $value_insert_fn = 'replace', $sub_runtime_props = array(), $switch_population_target = false)
+	private function elemSetContent($element, $data_value, $value_insert_fn = 'replace', $sub_runtime_props = array())
 	{
 		if (empty($element))
 		{
 			return;
 		}
 		
-		if (is_array($data_value))
+		# 2. $data_value is string; insert into matched elements
+		
+		// This is crucial!
+		// This element may have already been parsed. Its content - the inserted data - may be also be parseable as well.
+		// If this is so, a loop call to reparse the document may already have captured this parseable data in a nodeList.
+		// Insert-replacing this element's parseable data will send the data out of the current document and make it unavailable.
+		// To avoid this problem, all already-parsed elements have the 'data-codelessui-no_parse' attribute set. Detect this attribute and return!
+		if ($this->on_reparse && $element->hasAttribute("data-codelessui-no_parse"))
 		{
-			# 1. Organize a loop if $data_value is an array
-			$this->repeat_depth_count ++;
-
-			// Determine if this is a repeat on the X or Y axis - for multidimensional array
-			$repeating_axis = $this->repeat_depth_count % 2 == 0 ? "x" : "y";
-			$current_repeat_fn = $this->elemGetParam('repeat_fn_'.$repeating_axis, $sub_runtime_props, $element);
-
-			# 2. processRender()
-			$this->processRender($data_value, $element, $current_repeat_fn, $switch_population_target);
-
-			$this->repeat_depth_count --;
-		}
-		else
-		{
-			# 2. $data_value is string; insert into matched elements
+			$element->removeAttribute("data-codelessui-no_parse");
 			
-			// This is crucial!
-			// This element may have already been parsed. Its content - the inserted data - may be also be parseable as well.
-			// If this is so, a loop call to reparse the document may already have captured this parseable data in a nodeList.
-			// Insert-replacing this element's parseable data will send the data out of the current document and make it unavailable.
-			// To avoid this problem, all already-parsed elements have the 'data-codelessui-no_parse' attribute set. Detect this attribute and return!
-			if ($this->on_reparse && $element->hasAttribute("data-codelessui-no_parse"))
+			return;
+		}
+
+		if (!empty(trim($data_value)))
+		// Insert the real data
+		{
+			// If $data_value is plain text - Check if $data_value contains HTML tags
+			if (!preg_match("/<[^<].*>/", $data_value))
 			{
-				$element->removeAttribute("data-codelessui-no_parse");
-				
-				return;
+				// Create TextNode and append
+				//$documentFragment = $this->CodelessUiDom->createTextNode($data_value); // Encoding entities even though already encoded
+				$documentFragment = $this->CodelessUiDom->createCDATASection($data_value);
 			}
-	
-			if (!empty(trim($data_value)))
-			// Insert the real data
+			else
 			{
-				// If $data_value is plain text - Check if $data_value contains HTML tags
-				if (!preg_match("/<[^<].*>/", $data_value))
+				$documentFragment = $this->CodelessUiDom->createDocumentFragment();
+				$documentFragment->appendXML($data_value);
+			}
+			
+			// appendChild() throws error if $documentFragment is empty
+			if (!empty($documentFragment))
+			{
+				if ($value_insert_fn == "prepend" && $element->hasChildNodes())
 				{
-					// Create TextNode and append 
-					$documentFragment = $this->CodelessUiDom->createTextNode($data_value);
+					$element->insertBefore($documentFragment, $element->firstChild);
 				}
 				else
 				{
-					$documentFragment = $this->CodelessUiDom->createDocumentFragment();
-					$documentFragment->appendXML($data_value);
-				}
-				
-				// appendChild() throws error if $documentFragment is empty
-				if (!empty($documentFragment))
-				{
-					if ($value_insert_fn == "prepend" && $element->hasChildNodes())
+					if ($value_insert_fn == "replace")
 					{
-						$element->insertBefore($documentFragment, $element->firstChild);
+						$element->nodeValue = "";
 					}
-					else
-					{
-						if ($value_insert_fn == "replace")
-						{
-							$element->nodeValue = "";
-						}
-						
-						$element->appendChild($documentFragment);
-					}
+					
+					$element->appendChild($documentFragment);
 				}
+			}
+		}
+		else
+		// Content is empty
+		{
+			$on_content_empty = $this->elemGetParam('on_content_empty', $sub_runtime_props, $element);
+
+			if ($on_content_empty == "clear" || $on_content_empty == "clear_and_set_flag")
+			{
+				$element->nodeValue = "";
+			}
+			elseif ($on_content_empty == "set_flag" || $on_content_empty == "clear_and_set_flag")
+			{
+				$element->setAttribute("data-codelessui-content_empty", "true");
+			}
+			elseif ($on_content_empty == "no_render")
+			{
+				$parentNode = $element->parentNode;
+				$parentNode->removeChild($element);
+				// This element hanle now changes to parent... This is what will be returned
+				$element = $parentNode;
 			}
 			else
-			// Content is empty
 			{
-				$on_content_empty = $this->elemGetParam('on_content_empty', $sub_runtime_props, $element);
-
-				if ($on_content_empty == "clear" || $on_content_empty == "clear_and_set_flag")
-				{
-					$element->nodeValue = "";
-				}
-				
-				if ($on_content_empty == "set_flag" || $on_content_empty == "clear_and_set_flag")
-				{
-					$element->setAttribute("data-codelessui-content_empty", "true");
-				}
-				
-				if ($on_content_empty == "no_render")
-				{
-					$parentNode = $element->parentNode;
-					$parentNode->removeChild($element);
-					// This element hanle now changes to parent... This is what will be returned
-					$element = $parentNode;
-				}
+				$element->nodeValue = $data_value;
 			}
-			
-			// This whole documen may be parsed again to parse inserted data
-			// When this happens, the currently parsed elements should not be parsed again... so lets set the flag
-			if ($this->parse_inserted_data && !$this->on_reparse && !isset($parentNode)/*Elements can sometimes be deleted with the on_content_empty command*/)
-			{
-				$element->setAttribute("data-codelessui-no_reparse", "true");
-			}
-			
-			return $element;
 		}
+		
+		// This whole documen may be parsed again to parse inserted data
+		// When this happens, the currently parsed elements should not be parsed again... so lets set the flag
+		if ($this->parse_inserted_data && !$this->on_reparse && !isset($parentNode)/*Elements can sometimes be deleted with the on_content_empty command*/)
+		{
+			$element->setAttribute("data-codelessui-no_reparse", "true");
+		}
+		
+		return $element;
 	}
 	
 	
 	
 	/**
-     * Insert data into an element's attribute node - data encountered while looping within processRender().
+     * Affects the existence of an element: 
+	 * remove it altogether, remove it but empty its children to its parent, or simply change tag name.
+	 *
+     * @param DOMNode		$element			An instance of DOMNode representing the element.
+     * @param bool|string	$as_value			Specifies the render option.
+	 *
+     * This is used internally
+     *
+     * @access private
+	 *
+	 * @return	null|DOMNode				Null or DOMNode - the new render type on change of tag name.
+     */
+	private function elemRenderAs($element, $as_value)
+	{
+		if ($as_value === false)
+		{
+			// Do not render
+			// Remove element from DOM
+			$element->parentNode->removeChild($element);
+			// Remove var
+			unset($element);
+		}
+		elseif (is_string($as_value))
+		{
+			$documentFragment = $this->CodelessUiDom->createDocumentFragment();
+			
+			if (empty(trim($as_value)) && $element->hasChildNodes())
+			{
+				// Empty content of this element to its parent
+				// Use for instead of foreach - foreach is making $element unvailable even before completing loop
+				for($i = 0; $i < $element->childNodes->length; $i ++)
+				{
+					$documentFragment->appendChild($element->childNodes->item($i));
+				}
+			}
+			else
+			{
+				// Render as: new tag name
+				// Get element markup
+				$node_markup = $this->CodelessUiDom->saveHTML($element);
+				// Determine original tag name and replace it
+				if ($element->nodeName && substr($node_markup, 0, 1) == '<')
+				{
+					echo trim($as_value);
+					$node_name_length = strlen($element->nodeName);
+					// Recreate start and end tags
+					$new_node_markup = '<'.trim($as_value)
+					.substr($node_markup, $node_name_length + 1/*cuts out angle bracket + start tag name*/, - (int)($node_name_length + 1)/*cuts out end tag name + angle bracket*/)
+					.trim($as_value).'>';
+					
+					$documentFragment->appendXML($new_node_markup);
+				}
+			}
+			
+			$element->parentNode->replaceChild($documentFragment/*new*/, $element/*old*/);
+			
+			// Return $documentFragment if still in the current DOM
+			return !empty($documentFragment->ownerDocument) ? $documentFragment : null;
+		}
+	}
+	
+	
+	
+	
+	/**
+     * Insert data into an element's attribute node - data encountered while looping within renderTemplate().
 	 *
      * @param DOMNode	$element			An instance of DOMNode representing the element.
      * @param array		$attr_name			Name of an element attribute.
@@ -851,7 +929,7 @@ Class CodelessUi
 	
 	
 	/**
-     * Locate external data from the specified import location - location path encountered while looping within processRender().
+     * Locate external data from the specified import location - location path encountered while looping within renderTemplate().
 	 * 
 	 * This external could live in and retrieved from any of the places below:
 	 * Local or remote machine with a URL. The URL string must be enclosed within url(...) parentheses.
@@ -976,14 +1054,15 @@ Class CodelessUi
 	 * 
 	 * Merge all params on both areas. Give HTML attribute params first priority.
 	 *
-     * @param array					$sub_data_stack			An array of data to be rendered provided recursively.
-	 *														If this is user-provided, this will be used as total data stack for the document.
-     * @param CodelessUiNodeList	$sub_element_path		The unique xpath to the current element whose data is being rendered on this processRender().
-     * @param array					$current_repeat_fn		Repeat function obtained for this element - usually from runtime_props().
+     * @param array			$sub_data_stack		An array of data to be rendered provided recursively.
+	 *											If this is user-provided, this will be used as total data stack for the document.
+     * @param DOMNode		$sub_element		The unique xpath to the current element whose data is being rendered on this renderTemplate().
+     * @param bool	 		$repeat_fn		 	The repeat function to use.
+     * @param bool	 		$self_repeat		Sets whether to populate data on repeatitions of $source_element itself or child elements.
 	 *
      * @access private
      */
-	private function processRender(array $sub_data_stack = null, $sub_element = null, $current_repeat_fn = null, $switch_population_target = false)
+	private function renderTemplate(array $sub_data_stack = null, DOMNode $sub_element = null, $current_repeat_fn = null, $self_repeat = false)
 	{
 		# 1. Use the $sub_data_stack as data_stack if looping
 		if (!empty($sub_data_stack))
@@ -1010,7 +1089,7 @@ Class CodelessUi
 			# 1. Prepare the $element for smart usage
 						
 			// Use the CodelessUiNodeList to create and/or rearrange element's children in a defined pattern
-			$CodelessUiNodeList = $this->CodelessUiDom->createNodeListFromSelectors(array_keys($data_stack)/*$element_selectors*/, $source_element, $repeat_fn, $switch_population_target);
+			$CodelessUiNodeList = $this->CodelessUiDom->createNodeListFromSelectors(array_keys($data_stack)/*$element_selectors*/, $source_element, $repeat_fn, $self_repeat);
 			
 			foreach($data_stack as $element_selector => $data_value)
 			{
@@ -1040,45 +1119,49 @@ Class CodelessUi
 							}
 						}
 		  
-						# 5. Reanalyze $data_stack and obtain the different parts when so constructed
+						# 5. Reanalyze $data_value and obtain the different parts when so constructed
 						if (!empty($data_value) && is_array($data_value))
 						{
-							// Is $data_value a compound argument? Extract and handle each argument
-							$params = array('@params', '@params::after', '@params::before', '@attr', '@attr::after', '@attr::before', '@import', '@import::after', '@import::before', '@content', '@content::after', '@content::before', '@children', '@self');
+							# 1. Obtain params
 							
-							if (array_intersect($params, array_keys($data_value)))
+							$runtime_props = array();
+							// Obtains $runtime_props
+							// IMPORTANT: remove this key from $data_value so it won't be regarded below as content array.
+							if (array_key_exists('@params', $data_value))
 							{
-								// This will hold all runtime props obtained from compound argument
-								$runtime_props = array();
-								
+								$runtime_props = $data_value['@params'];
+								// Remove key
+								unset($data_value['@params']);
+							}
+							
+							// Determine if this is a repeat on the X or Y axis - for multidimensional array
+							$repeating_axis = $this->repeat_depth_count % 2 == 0 ? "x" : "y";
+							$current_repeat_fn = $this->elemGetParam('repeat_fn_'.$repeating_axis, $runtime_props, $element);
+				
+							// ------------------------------------------------------------------------------------------
+							
+							// Is $data_value a compound argument? Extract and handle each argument
+							$params = array('@content', '@content::after', '@content::before', '@attr', '@attr::after', '@attr::before', '@import', '@import::after', '@import::before', '@children', '@children::after', '@children::before', '@render', '@repeat');
+							
+							// VERY IMPORTANT: @render can make elements unvailable!
+							if (!empty($element) && array_intersect($params, array_keys($data_value)))
+							{
+								// SO THIS COMPOUND ARGUMENT. Obtain the different parts.
 								foreach($params as $param_name)
 								{
 									// Supports only double colons.
 									if (array_key_exists($param_name, $data_value))
 									{
-										// Get working parts
+										# 1. Get working parts
 										$param_type = $param_name;
 										$value_insert_fn = $common_value_insert_fn;
 										
 										if (strpos($param_name, '::before') !== false || strpos($param_name, '::after') !== false)
 										{
 											$param_type = substr($param_name, 0, strpos($param_name, '::'));
-											 $value_insert_fn = strpos($param_name, '::before') !== false ? 'prepend' : 'append';
+											$value_insert_fn = strpos($param_name, '::before') !== false ? 'prepend' : 'append';
 										}
 
-										# 1. Obtain runtime_props
-										if ($param_type === '@params')
-										{
-											$runtime_props = array_merge($runtime_props, (array)$data_value[$param_name]);
-										}
-										else
-										{
-											// ---------------------------------------------------------------------
-											// $runtime_props have been gathered.
-											// We can now do things with it, even before other items in $params
-											// ---------------------------------------------------------------------
-										}
-										
 										# 2. Work with attributes
 										if ($param_type === '@attr')
 										{
@@ -1097,35 +1180,74 @@ Class CodelessUi
 											$this->elemSetContent($element, $content/*$data_value*/, $value_insert_fn, $runtime_props);
 										}
 										
-										# 4. Work with children
-										if ($param_type === '@children' && is_array($data_value[$param_name]))
+										# 4. Work with content
+										if ($param_type === '@content' || ($param_type === '@children'/* && is_array($data_value[$param_name])*/))
 										{
-											$content = $data_value[$param_name];
-											$this->elemSetContent($element, $content/*$data_value*/, $value_insert_fn, $runtime_props);
+											if (is_array($data_value[$param_name]))
+											{
+												# 1. Organize a loop if $data_value is an array
+												$this->repeat_depth_count ++;
+									
+												// TRIGGER LOOP... but multiply this element
+												// -----------------------------------------
+												$this->renderTemplate((array)$data_value[$param_name]/*$data_value*/, $element, $current_repeat_fn);
+									
+												$this->repeat_depth_count --;
+											}
+											else
+											{
+												// Insert string content
+												$this->elemSetContent($element, $data_value[$param_name]/*$data_value*/, $value_insert_fn, $runtime_props);
+											}
 										}
 										
-										# 5. Work with content
-										if ($param_type === '@content' || $param_type == '@self')
+										# 5. Remove element OR change element type
+										if ($param_type === '@render')
 										{
-											$is_switch_to_self = $param_type === '@self';
-											$content = $data_value[$param_name];
-											$this->elemSetContent($element, $content/*$data_value*/, $value_insert_fn, $runtime_props, $is_switch_to_self/*switch_population_target*/);
+											// $element changes.
+											// Take note: $element will be null if it was removed - according to the render param
+											$element = $this->elemRenderAs($element, $data_value['@render']);
+										}
+										
+										// From this point inward, we must test for the existence of $element - @render can make it unavailable
+										// ----------------------------------------------------------------------------------------------------
+										
+										# 6. Work with content
+										if (!empty($element) && $param_type === '@repeat')
+										{
+											// TRIGGER LOOP... but multiply this element
+											// -----------------------------------------
+											$this->renderTemplate((array)$data_value[$param_name]/*$data_value*/, $element, $current_repeat_fn, true);
 										}
 									}
+								}
+								
+								// If anything remains in array after removing the known parts... throw exception
+								// Spoils nothing even if ignored. But enforces consistency
+								if (!empty(array_diff(array_keys($data_value), $params)))
+								{
+									throw new Exception('Some invalid properties found in compound argument: '.implode(', ', array_diff(array_keys($data_value), $params)).' mixed with '.implode(', ', array_intersect(array_keys($data_value), $params)));
 								}
 							}
 							else
 							{
 								// LOOP
-								// This is going to come back to processRender() since it's an array.
-								// But let's not organize that loop here... Better there.
-								$this->elemSetContent($element, $data_value, $common_value_insert_fn);
+								if (is_array($data_value))
+								{
+									# 1. Organize a loop if $data_value is an array
+									$this->repeat_depth_count ++;
+						
+									// TRIGGER LOOP...
+									// ---------------
+									$this->renderTemplate($data_value, $element, $current_repeat_fn);
+						
+									$this->repeat_depth_count --;
+								}
 							}
 						}
 						elseif (!empty($data_value))
 						{
 							// If $data_value is all a string
-							// Or the array left after unsetting the other parts - above
 							$this->elemSetContent($element, $data_value, $common_value_insert_fn);
 						}
 					}
@@ -1140,7 +1262,7 @@ Class CodelessUi
 	/**
      * Render the template, get it whole or part.
 	 * 
-     * @param string	$element_selector	An element selector specifying the element to return.
+     * @param bool		$print				Whether to print rendered document or not.
 	 *
 	 * This method will not change until a major release.
 	 *
@@ -1150,12 +1272,14 @@ Class CodelessUi
 	 *
 	 * @return	void|string				void if the rendered template is echoed, depending on CodelessUi::$auto_print_output_on_render. String if returned.
      */
-	public function render($element_selector = null)
+	public function render($print = true)
 	{
 		// First, and, maybe, final parse.
-		$this->processRender();
+		$this->renderTemplate();
+		// Normalize
+		$this->CodelessUiDom->normalizeDocument();
 		// $HTMLDoc
-		$HTMLDoc = $this->CodelessUiDom->saveHTML($element_selector);
+		$HTMLDoc = $this->CodelessUiDom->saveHTML();
 		
 		// Should this whole document be parsed again to parse inserted data?
 		// Then go just one round more... remember to ignore already parsed elements on this first round.
@@ -1168,23 +1292,53 @@ Class CodelessUi
 			$this->on_reparse = true;
 			
 			// Final parse.
-			$this->processRender();
+			$this->renderTemplate();
 			// New $HTMLDoc.
-			$HTMLDoc = $this->CodelessUiDom->saveHTML($element_selector);
+			$HTMLDoc = $this->CodelessUiDom->saveHTML();
 			
 			// Reset flag.
 			$this->on_reparse = false;
 		}
 
 		// Set the 'rendered' flag
-		$this->is_rendered = true;
+		$this->is_template_rendered = true;
 		
 		// Re
-		if (!$this->auto_print_output_on_render)
+		if (!$print)
 		{
 			return $HTMLDoc;
 		}
 		
 		echo $HTMLDoc;
+	}
+	
+	
+	
+	/**
+     * Return part of the template after rendering.
+	 * 
+     * @param string	$element_selector	An element selector specifying the element to return.
+	 *
+	 * This method will not change until a major release.
+	 *
+	 * @api
+     *
+     * @access public
+	 *
+	 * @return	string				The specified element if available.
+     */
+	public function getRendered($element_selector)
+	{
+		if (!$this->is_template_rendered)
+		{
+			$HTMLDoc = $this->render(false);
+			if (empty($element_selector))
+			{
+				// We already have all we need
+				return $HTMLDoc;
+			}
+		}
+		
+		return $this->CodelessUiDom->saveHTML($element_selector);
 	}
 }
