@@ -1,7 +1,7 @@
 {
     "name": "CodelessUi/CodelessUi",
     "type": "library",
-    "description": "CodelessUi - the standards-compliant PHP template engine",
+    "description": "CodelessUi - standards-compliant template engine for PHP",
     "keywords": ["templating","PHP","HTML"],
     "homepage": "https://www.facebook.com/CodelessUi/",
     "license": "GPL-3.0",
@@ -12,8 +12,9 @@
         }
     ],
     "support": {
-        "https://www.facebook.com/CodelessUi/",
-		"https://www.twitter.com/CodelessUi/"
+        "issues": "https://github.com/ox-harris/CodelessUi/issues",
+        "forum": "https://www.twitter.com/CodelessUi/",
+        "general": "https://www.facebook.com/CodelessUi/"
     },
     "require": {
         "php": ">=5.3"
