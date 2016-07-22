@@ -1,7 +1,7 @@
 {
     "name": "ox-harris/codeless-ui",
     "description": "CodelessUi - standards-compliant template engine for PHP",
-    "keywords": ["templating","PHP","HTML"],
+    "keywords": ["templating","template engine","PHP","HTML"],
     "homepage": "https://www.facebook.com/CodelessUi/",
     "license": "GPL-3.0",
     "authors": [
