@@ -1,5 +1,5 @@
 {
-    "name": "ox-harris/codelessui",
+    "name": "ox-harris/codeless-ui",
     "type": "library",
     "description": "CodelessUi - standards-compliant template engine for PHP",
     "keywords": ["templating","PHP","HTML"],
