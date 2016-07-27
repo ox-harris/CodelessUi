@@ -95,7 +95,7 @@
 	 *
 	 * Used to determine when to auto-generate more elements for the given number of items in data stack.
      *
-     * @var int $num_node_calls_expected
+     * @var int $num_nodes_found
 	 *
 	 * @see createNodeListFromElement().
 	 *
@@ -108,7 +108,7 @@
 	 *
 	 * Used to determine when to auto-generate more elements for the given number of items in data stack.
      *
-     * @var int $num_node_calls_expected
+     * @var int $half_num_nodes_found
 	 *
 	 * @see createNodeListFromElement().
 	 *
@@ -121,7 +121,7 @@
 	 *
 	 * This will be an offset integer added to second half of the total count of calls list provided.
      *
-     * @var int $num_node_calls_expected
+     * @var int $half_num_nodes_found_offset
 	 *
 	 * @see createNodeListFromElement().
 	 * 
@@ -131,19 +131,6 @@
      */
 	private $half_num_nodes_found_offset;
 
-	/**
-     * This keeps reference to the element before which to insert all duplicated nodes.
-     *
-     * @var int $insert_before
-	 *
-	 * @see duplicateNode()
-	 * 
-     * This is used internally
-     *
-     * @access private
-     */
-	private $insert_before = 0;
-	
 	/**
      * An instance of the class CodelessUiDom.
 	 *
@@ -162,13 +149,13 @@
 	 *
 	 * This is obtained from the current state of CodelessUi.
      *
-     * @var string $CodelessUi
+     * @var string $repeat_fn
 	 *
 	 * @see __constructor().
 	 *
 	 * @access private
      */
-	public $repeat_fn = array();
+	public $repeat_fn;
 
 	
 	
@@ -187,7 +174,12 @@
 	public function __construct(array $element_selectors, $source_element, $repeat_fn = null, $self_repeat = false)
 	{
 		// Initially available elements have been populated.
-		$this->repeat_fn = $repeat_fn;
+		if (!empty($repeat_fn))
+		{
+			// Add initial comma, remove all spaces
+			$this->repeat_fn = ','.str_replace(' ', '', strtolower($repeat_fn)).',';
+		}
+		
 		$this->self_repeat = $self_repeat;
 														
 		// Set these before any duplication begins... may be needed
@@ -285,7 +277,7 @@
      */
 	private function addToNodeList($node, $before_cursor = null)
 	{
-		if ($before_cursor)
+		if ($before_cursor && isset($this->nodeList[$before_cursor]))
 		{
 			$nodeList_second_half = array_splice($this->nodeList, $before_cursor);
 			$this->nodeList[] = $node;
@@ -315,178 +307,155 @@
 		if ($this->num_nodes_found < $this->num_node_calls_expected && !empty($this->repeat_fn))
 		{
 			$cursor = null;
-			$last_cursor_move = null;
+			$next_cursor_move = null;
 			
 			for($current_node_key = $this->num_nodes_found; $current_node_key < $this->num_node_calls_expected; $current_node_key ++)
 			{
 				// The default
-				$duplicate_node_relative_placement = 'after';
+				$node_list_relative_placement = 'after-self'; // After self
 				
-				// The cursor movement
-				// Increment or decrement the cursor
-				if ($last_cursor_move == "+")
+				// --------------------------------------------------------
+				// Handle repeat functions
+				// --------------------------------------------------------
+				
+				if (strpos($this->repeat_fn, ",repeat-all,") !== false)
 				{
-					if ($cursor < $this->num_nodes_found)
+					// The cursor movement
+					// Increment or decrement the cursor
+					if ($next_cursor_move == "+" && $cursor < $this->num_nodes_found)
 					{
 						// Cursor can well increment to exactly total $this->num_nodes_found which will be a node key that is beyond range
 						// But this helps indicate end of $this->nodeList, which the next section handles with a repeat
 						$cursor ++;
 					}
-				}
-				elseif ($last_cursor_move == "-")
-				{
-					if ($cursor > 0)
+	
+					if ($next_cursor_move == "-" && $cursor > -1)
 					{
 						// Cursor may well decrement to exactly 0, which is the minimum valid node key
 						// But this '0' condition will be detected on the next call to seek and a repeat will begin
 						$cursor --;
 					}
-					elseif ($cursor === 0)
+					
+					// ---------------------
+					// Handle the two $cursor extreme states: too high, too low
+					// ---------------------
+					
+					// 1. When the highest end of nodeList is reached. Or $cursor is yet to be initialized
+					// Use the repeat function defined Or if this is first run where $cursor is null
+					if ($cursor === null || (int)$cursor === (int)$this->num_nodes_found)
 					{
-						$cursor = 0;
-						$last_cursor_move = "+";
-					}
-				}
-				
-				// Use the repeat function defined Or if this is first run where $cursor is null
-				// 1. When end of nodeList is reached.
-				if ((int)$cursor === (int)($this->num_nodes_found) || $cursor === null)
-				{
-					// Simply repeat from begining
-					if (in_array("simple", $this->repeat_fn))
-					{
-						// 1. Everytime nodelist end is reached and the 'once' flag is not set
-						// 2. Or when the 'once' flag is set, begins from the very point where repeating backwards will just satisfy the total num_node_calls_expected.
-						if ((!in_array("once", $this->repeat_fn))
-						|| (in_array("once", $this->repeat_fn) && $current_node_key + $this->num_nodes_found >= $this->num_node_calls_expected))
+						// Repeat from end back to begining
+						if (strpos($this->repeat_fn, ",alternate,") !== false)
 						{
-							$cursor = 0;
-							$last_cursor_move = "+";
+							// 1. Everytime nodelist end is reached and the 'once' flag is not set
+							// 2. Or when the 'once' flag is set, begins from the very point where repeating backwards will just satisfy the total num_node_calls_expected.
+							if ((strpos($this->repeat_fn, ",once,") === false)
+							|| (strpos($this->repeat_fn, ",once,") !== false && $current_node_key + $this->num_nodes_found >= $this->num_node_calls_expected))
+							{
+								$cursor = $this->num_nodes_found - 1;
+								$next_cursor_move = "-";
+							} 
 						}
-					}
-					// Repeat from end back to begining
-					elseif (in_array("mirror", (array)$this->repeat_fn))
-					{
-						// 1. Everytime nodelist end is reached and the 'once' flag is not set
-						// 2. Or when the 'once' flag is set, begins from the very point where repeating backwards will just satisfy the total num_node_calls_expected.
-						if ((!in_array("once", $this->repeat_fn))
-						|| (in_array("once", $this->repeat_fn) && $current_node_key + $this->num_nodes_found >= $this->num_node_calls_expected))
+						// Simply repeat from begining
+						else//if (in_array("simple", $this->repeat_fn))
+						{
+							// 1. Everytime nodelist end is reached and the 'once' flag is not set
+							// 2. Or when the 'once' flag is set, begins from the very point where repeating backwards will just satisfy the total num_node_calls_expected.
+							if ((strpos($this->repeat_fn, ",once,") === false)
+							|| (strpos($this->repeat_fn, ",once,") !== false && $current_node_key + $this->num_nodes_found >= $this->num_node_calls_expected))
+							{
+								$cursor = 0;
+								$next_cursor_move = "+";
+							}
+						}
+						
+						// If $cursor is still null, it means none of the two conditions above has been met
+						// Initialize $cursor
+						if ($cursor === null)
 						{
 							$cursor = $this->num_nodes_found - 1;
-							$last_cursor_move = "-";
-						} 
+							$next_cursor_move = "+";
+						}
+					}
+					// 2. When the lowest end of nodeList is reached.
+					elseif ($cursor === -1)
+					{
+						$cursor = 0;
+						$next_cursor_move = "+";
 					}
 					
-					// If none of the conditions above were met and $cursor is still null (on first run)
-					// Initialize the cursor - start with forward movement.
-					if ($cursor === null)
+					// Last item in NodeList
+					$node_list_relative_placement = 'last-item';
+				}
+				elseif (strpos($this->repeat_fn, ",repeat-middle,") !== false || (strpos($this->repeat_fn, ",repeat-nth(") !== false && $nth = substr($this->repeat_fn, strpos($this->repeat_fn, '('), strpos($this->repeat_fn, '),'))/*assignment*/ && is_numeric($nth) ))
+				{
+					if (strpos($this->repeat_fn, ",repeat-middle,") !== false)
 					{
-						$cursor = $this->num_nodes_found - 1;
-						$last_cursor_move = "+";
+						$middle_point = $this->half_num_nodes_found + $this->half_num_nodes_found_offset;
+						
+						// Inner_padded must always use the middle element for padding
+						// If inner_padded is set to use the LEFT next element for padding can only work when $this->num_nodes_found must be EVEN.
+						if (in_array("left", $this->repeat_fn) && $this->num_nodes_found % 2 == 0 && $middle_point > 0)
+						{
+							$middle_point --;
+						}
+						
+						$cursor = $middle_point;
 					}
+					else
+					{
+						$cursor = (int)$nth - 1; // Its not zero-based
+					}
+				}
+				elseif (strpos($this->repeat_fn, ",repeat-first,") !== false)
+				{
+					$cursor = 0;
+					//$next_cursor_move = "+";
+				}
+				else//if (strpos($this->repeat_fn, ",repeat-last,") !== false)
+				{
+					$cursor = $this->num_nodes_found - 1;
+					//$next_cursor_move = "+";
 				}
 				
-				// 2. There is inner_padded repeat
-				if (in_array("inner_padded", (array)$this->repeat_fn) || in_array("#inner_padded", (array)$this->repeat_fn))
-				{
-					$middle_point = $this->half_num_nodes_found + $this->half_num_nodes_found_offset;
-					
-					// Inner_padded must always use the middle element for padding
-					// If inner_padded is set to use the LEFT next element for padding can only work when $this->num_nodes_found must be EVEN.
-					if (in_array("#inner_padded", $this->repeat_fn) && $this->num_nodes_found % 2 == 0 && $middle_point > 0)
-					{
-						$middle_point --;
-					}
-					
-					// $cursor changes
-					$cursor = $middle_point;
-					// $duplicate_node_relative_placement changes
-					$duplicate_node_relative_placement = 'before';
-				}
+				
+				
+				// --------------------------------------------------------
+				// Compute placement and duplicate
+				// --------------------------------------------------------
 				
 				// The node to be duplicated
 				$node = $this->nodeList[$cursor][0]/*Has been a single node in array*/;
+				
 				// Where to place it
-				if ($duplicate_node_relative_placement === 'before')
+				if ($node_list_relative_placement === 'before-self')
 				{
-					$insert_before = $node;
+					$nodelist_before_cursor = $cursor;
+					$dom_insert_before = $node;
 				}
-				elseif ($duplicate_node_relative_placement === 'after')
+				elseif ($node_list_relative_placement === 'after-self')
 				{
-					$last_element_in_node_list = end($this->nodeList);
-					$insert_before = is_object($last_element_in_node_list[0]) ? $last_element_in_node_list[0]->nextSibling : null;
+					$nodelist_before_cursor = $cursor + 1;
+					$dom_insert_before = is_object($this->nodeList[$cursor][0]) ? $this->nodeList[$cursor][0]->nextSibling : null;
+				}
+				else//if ($node_list_relative_placement === 'last-item')
+				{
+					$nodelist_before_cursor = null;
+					$key_last = count($this->nodeList) - 1;
+					$dom_insert_before = is_object($this->nodeList[$key_last]) ? $this->nodeList[$key_last]->nextSibling : null;
 				}
 				
-				$duplicate = $this->ownerDocument->duplicateNode($node, 'immediate_sibling', $insert_before);
-				$this->addToNodeList(array($duplicate), $cursor);
-			}
-			
-			/* Nodes have been populated... Apply other Fns: Justify or Shuffle */
-	
-			/* Justify should only work WITH repeats*/
-			if ((in_array("simple", $this->repeat_fn) || in_array("mirror", $this->repeat_fn)) && in_array("justify", $this->repeat_fn))
-			{
-				$this->justifyNodeList();
+				$duplicate = $this->ownerDocument->duplicateNode($node, 'immediate_sibling', $dom_insert_before);
+				$this->addToNodeList(array($duplicate), $nodelist_before_cursor);
 			}
 		}
 		
 		// Shuffle
-		if (in_array("shuffle", (array)$this->repeat_fn))
+		if (strpos($this->repeat_fn, ",shuffle-data,") !== false)
 		{
 			shuffle($this->nodeList);
 		}
-	}
-	
-	
-	
-	/**
-	 * If $this->num_nodes_found does not exactly fit into $this->num_node_calls_expected any number of times,
-	 * we pad $this->nodeList on the right with some of the original $this->num_nodes_found.
-	 * That way, the remainder of the modulu is halved to both sides of $this->nodeList.
-	 *
-	 * @return void
-     */
-	private function justifyNodeList()
-	{
-		if ($this->num_node_calls_expected % $this->num_nodes_found)
-		{
-			// Start patching...
-			$slice_start = $this->num_node_calls_expected % $this->num_nodes_found;
-			$patch_count = $slice_start > 2 ? round($slice_start / 2) : 0;
-
-			if ($patch_count)
-			{
-				// Get the original list - subject to reverse
-				$nodeList = array_slice($this->nodeList, 0, $this->num_nodes_found);
-				
-				if (in_array("mirror", $this->repeat_fn))
-				{
-					// How many times have $this->num_nodes_found fit into $this->num_node_calls_expected?
-					$num_rounds = round($this->num_node_calls_expected / $this->num_nodes_found);
-					// Is $num_rounds even or odd? If odd, reverse $nodeList
-					if ($num_rounds % 2 != 0)
-					{
-						$nodeList = array_reverse($nodeList);
-					}
-				}
-				
-				// $patches are the nodes to relocate to the other side
-				$patches = array_slice($nodeList, $slice_start, $patch_count);
-				
-				// Now relocate.
-				foreach($patches as $key => $node)
-				{
-					$delete = array_shift($this->nodeList);
-					
-					$clone = $node[0]->parentNode->appendChild($node[0]->cloneNode(true));
-					$this->nodeList[$key] = array($clone);
-					
-					$delete[0]->parentNode->removeChild($delete[0]);
-				}
-			}
-		}
 	}		
-		
 		
 		
 		
@@ -506,6 +475,6 @@
 		
 		$this->cursor ++;
 
-		return $this->nodeList[$this->cursor];
+		return isset($this->nodeList[$this->cursor]) ? $this->nodeList[$this->cursor] : null;
    }
 }
