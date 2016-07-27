@@ -176,7 +176,7 @@ Class CodelessUiDom extends DOMDocument
 		{
 			if (substr($element_selector, 0, 6) == 'xpath:')
 			{
-				$query = substr($element_selector, 6);
+				$query = substr(trim($element_selector), 6);
 			}
 			
 			$selector_build = $query;
@@ -185,19 +185,34 @@ Class CodelessUiDom extends DOMDocument
 		{
 			if (substr($element_selector, 0, 4) == 'css:')
 			{
-				$query = substr($element_selector, 4);
+				$query = substr(trim($element_selector), 4);
 			}
 
 			// Sanitize string
-			$element_selector = str_replace(array('  ', '::'/**/), array(' ', ':'/**/), $element_selector);
+			$element_selector = str_replace(array('  ', '::'/**/), array(' ', ':'/**/), trim($element_selector));
 			// Ususally found in attributes...
 			$element_selector = str_replace(array(' = ', '= ', ' ='), '=', $element_selector);
 			
 			$selector = $element_selector;
-
-			$match_spaces_between_whole_element_selector = '/[ ](?=[^\]\)]*?(?:\[\(|$))/i';
+			
+			/**
+			  * Regex to split css expressions by spaces, ignoring spaces within brackets, even nested.
+			  * Old Expression: [ ](?=[^\]\)"\']*?(?:\[\(|$))
+			  * Fails with the combiniation of words + brackets
+			  *
+			  * New Expression: \[[^]]*\](*SKIP)(*F)|\s+
+			  * Thanks to http://stackoverflow.com/questions/1209415/regex-to-remove-all-whitespaces-except-between-brackets - zx81
+			  * Works for square brackets '[]' - even nested
+			  * Obtained 27-07-16
+			  * 
+			  * Now modified to also support parenthesis '()'
+			  * Modified 27-07-16
+			  *
+			  */
+			$match_spaces_between_whole_element_selector = '/[\(|\[][^]]*[\]|\)](*SKIP)(*F)|\s+/i';
+			// Split
 			$whole_element_selectors = preg_split($match_spaces_between_whole_element_selector, $selector);
-						
+				
 			for($i = 0; $i < count($whole_element_selectors); $i ++)
 			{
 				$selector = $whole_element_selectors[$i];
@@ -212,6 +227,8 @@ Class CodelessUiDom extends DOMDocument
 					# 1. Work with :psuedo_modifiers
 					if (strpos($selector, ':') !== false)
 					{
+						// This regex may be needed later: get everything between the first and last parenthesis; whether nested or not.
+						// (?<=\().*(?=\))
 						$selector_and_psuedo = explode(':', $selector);
 						$psuedo_modifier = isset($selector_and_psuedo[1]) ? $selector_and_psuedo[1] : null;
 						// $selector changes from now on
@@ -230,19 +247,19 @@ Class CodelessUiDom extends DOMDocument
 							{
 								// Get first node (relative to parent - not relative to result set, as in first-of-type()),
 								// test that it is self of this selector
-								$selector = '*[1]/self::'.$this->rewrite($selector);
+								$selector = '*[1]/self::'.$this->getElementsBySelector($selector, null, false);
 							}
 							elseif ($psuedo_modifier == 'last-child')
 							{
 								// Get last node (relative to parent - not relative to result set, as in last-of-type()),
 								// test that it is self of this selector
-								$selector = '*[last()]/self::'.$this->rewrite($selector);
+								$selector = '*[last()]/self::'.$this->getElementsBySelector($selector, null, false);
 							}
 							elseif ($psuedo_modifier == 'nth-child')
 							{
 								// Get nth node (relative to parent - not relative to result set, as in nth-of-type()),
 								// test that it is self of this selector
-								$selector = '*['.(int)$sub_selector.']/self::'.$this->rewrite($selector);
+								$selector = '*['.(int)$sub_selector.']/self::'.$this->getElementsBySelector($selector, null, false);
 							}
 							
 							elseif ($psuedo_modifier == 'first-of-type')
@@ -263,10 +280,13 @@ Class CodelessUiDom extends DOMDocument
 								
 								// Sanitize...
 								// If it's something like *[...] now going to be [:not(*[...])] - not what we want, let strip off the beginning *
-								if (substr($sub_selector, 0, 1) == '*')
+								/*if (substr($sub_selector, 0, 1) == '*')
 								{
 									$sub_selector = 'self::*'.substr($sub_selector, 1);
-								}
+								}*/
+								
+								// Don't Sanitize (27-07-16)
+								$sub_selector = 'self::'.$sub_selector;
 								
 								$selector = $this->rewrite($selector).'[not('.$sub_selector.')]';
 							}
@@ -378,7 +398,7 @@ Class CodelessUiDom extends DOMDocument
 	 *
 	 * @return	string			XPath query string.
      */
-	private function rewrite($css_selector)
+	public function rewrite($css_selector)
 	{
 		// Simple Attribute First Before introducing complex brackets
 		if (strpos($css_selector, '[') !== false && strpos($css_selector, ']') !== false && strpos($css_selector, '=') === false)
@@ -410,42 +430,55 @@ Class CodelessUiDom extends DOMDocument
 			// Attr Starts With
 			if (strpos($css_selector, '^=') !== false)
 			{
-				$css = '/\[(.*)\^=[\'"]?([^\'"]+)[\'"]?\]/i';
+				//$css = '/\[(.*)\^=[\'"]?([^\'"]+)[\'"]?\]/i';
+				$css = '/\[@?([^\^]*)\^=[\'"]?([^\'"]+)[\'"]?\]/i';
 				$xpath = '[contains(concat(" ", @$1), " $2")]';
 				$css_selector = preg_replace($css, $xpath, $css_selector);
 			}
 			// Attr Ends With
 			if (strpos($css_selector, '$=') !== false)
 			{
-				$css = '/\[(.*)\$=[\'"]?([^\'"]+)[\'"]?\]/i';
+				//$css = '/\[(.*)\$=[\'"]?([^\'"]+)[\'"]?\]/i';
+				$css = '/\[@?([^\&]*)\$=[\'"]?([^\'"]+)[\'"]?\]/i';
 				$xpath = '[contains(concat(@$1, " "), "$2 ")]';
 				$css_selector = preg_replace($css, $xpath, $css_selector);
 			}
 			// Attr Contains String
 			if (strpos($css_selector, '*=') !== false)
 			{
-				$css = '/\[(.*)\*=(.*)\]/i';
+				//$css = '/\[(.*)\*=(.*)\]/i';
+				$css = '/\[@?([^\*]*)\*=(.*)\]/i';
 				$xpath = '[contains(@$1, $2)]';
 				$css_selector = preg_replace($css, $xpath, $css_selector);
 			}
 			// Attr Has Dash-delimited Word
 			if (strpos($css_selector, '|=') !== false)
 			{
-				$css = '/\[(.*)\|=[\'"]?([^\'"]+)[\'"]?\]/i';
+				//$css = '/\[(.*)\|=[\'"]?([^\'"]+)[\'"]?\]/i';
+				$css = '/\[@?([^\|]*)\|=[\'"]?([^\'"]+)[\'"]?\]/i';
 				$xpath = '[contains(concat("-", @$1, "-"), "-$2-")]';
 				$css_selector = preg_replace($css, $xpath, $css_selector);
 			}
 			// Attr Contains Word
 			if (strpos($css_selector, '~=') !== false)
 			{
-				$css = '/\[(.*)\~=[\'"]?([^\'"]+)[\'"]?\]/i';
+				//$css = '/\[(.*)\~=[\'"]?([^\'"]+)[\'"]?\]/i';
+				$css = '/\[@?([^\~]*)\~=[\'"]?([^\'"]+)[\'"]?\]/i';
 				$xpath = '[contains(concat(" ", @$1, " "), " $2 ")]';
 				$css_selector = preg_replace($css, $xpath, $css_selector);
 			}
 			// Attr Is Word
 			if (strpos($css_selector, '=') !== false)
 			{
-				$css = '/\[@?(.*)=[\'"]?([^\'"]+)[\'"]?\]/i';
+				//$css = '/\[(.*)=[\'"]?([^\'"]+)[\'"]?\]/i';
+				
+				// 27-07-16:
+				// Start with [.
+				// Ignore any @ following [. e.g [@
+				// Begin finding characters that are not =.
+				// Stop at = if available. Or just stop if that's what ends it.
+				$css = '/\[@?([^=]*)=?[\'"]?([^\'"]+)[\'"]?\]/i';
+				
 				$xpath = '[@$1="$2"]';
 				$css_selector = preg_replace($css, $xpath, $css_selector);
 			}
