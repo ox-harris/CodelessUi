@@ -157,7 +157,7 @@ Class CodelessUi
 	 * when repeating on the x-axis - that is, going deeper in a multidimensional array.
 	 * It is especially used by CodelessUiNodeList.
      *
-     * @var array $repeat_fn_x: Sample values: "simple"|"mirror"|"once"|"inner_padded"|"justify"
+     * @var array $repeat_fn
 	 *
 	 * @see setRepeatFunctions()
 	 * 
@@ -165,14 +165,14 @@ Class CodelessUi
      *
      * @access private
      */
-	public $repeat_fn_x = array("simple");
+	public $repeat_fn = 'repeat-last';
 	
 	/**
      * A linear array of repeat function names to be followed 
 	 * when repeating on the y-axis - that is, when looping over items in an array.
 	 * It is especially used by CodelessUiNodeList.
      *
-     * @var array $repeat_fn_y: Sample values: "simple"|"mirror"|"once"|"inner_padded"|"justify"
+     * @var array $repeat_fn_y
 	 *
 	 * @see setRepeatFunctions()
 	 * 
@@ -180,7 +180,7 @@ Class CodelessUi
      *
      * @access private
      */
-	public $repeat_fn_y = array("simple");
+	public $repeat_fn_y;
 	
 	/**
      * This records how many levels deep the parser has gone in a multidimensional array.
@@ -475,6 +475,7 @@ Class CodelessUi
 	 */
 	public function assignData($element_selector, $data, $replace = true, $recurse = true, $is_include_path = false)
 	{
+		//throw new ErrorException(__METHOD__." has been depreciated! Use CodelessUi::assign() instead.", 0, E_USER_DEPRECIATED);
 		return $this->assign($element_selector, $data, $replace, $recurse, $is_include_path);
 	}
 	
@@ -572,7 +573,7 @@ Class CodelessUi
 	 * when elements have to be repeated in order to render any extra items in data array when data items outnumbers element count.
 	 *
      * @param string	$repeat_fn		An algarithm name from CodelessUi's predefined types.
-     * @param string	$repeat_fn_x	An algarithm specifically for repeating on the x-axis. If not supplied, $repeat_fn is used.
+     * @param string	$repeat_fn_y	An algarithm specifically for repeating on the y-axis. If not supplied, $repeat_fn is used.
 	 *
 	 * This method will not change until a major release.
 	 *
@@ -580,17 +581,12 @@ Class CodelessUi
 	 *
 	 * @return	self					For method chaining
      */
-	public function setRepeatFunctions($repeat_fn, $repeat_fn_x = null)
+	public function setRepeatFunctions($repeat_fn, $repeat_fn_y = null)
 	{
-		// If only $repeat_fn is supplied, use it as both repeat_fn_x & repeat_fn_y
-		if (empty($repeat_fn_x))
+		$this->repeat_fn = $repeat_fn;
+		
+		if (!empty($repeat_fn_y))
 		{
-			$this->repeat_fn_x = $repeat_fn;
-			$this->repeat_fn_y = $repeat_fn;
-		}
-		else
-		{
-			$this->repeat_fn_x = $repeat_fn_x;
 			$this->repeat_fn_y = $repeat_fn;
 		}
 		
@@ -618,7 +614,7 @@ Class CodelessUi
 	 *
 	 * @return	string|array|self			String or array depending on the data type obtained. But $this for method chaining, when the $var parameter is specified.
      */
-	public function obtainData($element_selector = null, & $var = null, $is_include_path = false)
+	public function getAssigned($element_selector = null, & $var = null, $is_include_path = false)
 	{
 		$data_stack = $is_include_path ? 'includes_stack' : 'data_stack';
 		
@@ -647,7 +643,19 @@ Class CodelessUi
 	}
 	
 	
-
+	/**
+	 * Alias of CodelessUi::getAssigned().
+	 *
+	 * @depreciated
+	 */
+	public function obtainData($element_selector = null, & $var = null, $is_include_path = false)
+	{
+		//throw new ErrorException(__METHOD__." has been depreciated! Use CodelessUi::getAssigned() instead.", 0, E_USER_DEPRECIATED);
+		return $this->getAssigned($element_selector, $var, $is_include_path);
+	}
+	
+	
+	
 	/**
      * Obtain include paths assigned to an element using an element selector as key.
      *
@@ -660,9 +668,9 @@ Class CodelessUi
 	 *
 	 * @return	array|self					Array of include paths. But $this for method chaining, when the $var parameter is specified.
      */
-	public function getInclude($element_selector = null, & $var = null)
+	public function getIncluded($element_selector = null, & $var = null)
 	{
-		return $this->obtainData($element_selector, $var, true);
+		return $this->getAssigned($element_selector, $var, true);
 	}
 	
 	
@@ -690,6 +698,20 @@ Class CodelessUi
 	{
 		foreach((array)$this->includes_stack as $element_selector => $indlude_path)
 		{
+			$fn = 'append';
+			if (substr(trim($element_selector), -8) === '::before' || substr(trim($element_selector), -7) === '::after')
+			{
+				if (substr(trim($element_selector), -8) === '::before')
+				{
+					$fn = 'prepend';
+					$element_selector = substr(trim($element_selector), 0, -8);
+				}
+				else
+				{
+					$element_selector = substr(trim($element_selector), 0, -7);
+				}
+			}
+			
 			$elements = $this->CodelessUiDom->getElementsBySelector($element_selector);
 			
 			if ($elements)
@@ -698,15 +720,30 @@ Class CodelessUi
 				{
 					if ($element)
 					{
-						if (!is_readable($indlude_path))
+						if (!is_file($indlude_path))
 						{
-							throw new Exception("The include path: ".$indlude_path." is not valid!");
+							throw new ErrorException("The include path: ".$indlude_path." is not valid!", 0, E_USER_NOTICE);
 						}
 						
 						$include_data = file_get_contents($indlude_path);
 						$documentFragment = $this->CodelessUiDom->createDocumentFragment();
 						$documentFragment->appendXML($include_data);
-						$element->appendChild($documentFragment);
+						
+						if (!$documentFragment->hasChildNodes())
+						{
+							throw new ErrorException("Document for the include path: ".$indlude_path." is malformed or has errors!", 0, E_USER_NOTICE);
+						}
+						else
+						{
+							if ($fn == 'prepend' && is_object($element->firstChild))
+							{
+								$element->insertBefore($documentFragment, $element->firstChild);
+							}
+							else
+							{
+								$element->appendChild($documentFragment);
+							}
+						}
 					}
 				}
 			}
@@ -755,13 +792,24 @@ Class CodelessUi
 		if (!empty(trim($data_value)))
 		// Insert the real data
 		{
+			// How should we create the element's content?
+			$content_type = $this->elemGetParam('content_type', $sub_runtime_props, $element);
+			
 			// If $data_value is plain text - Check if $data_value contains HTML tags
-			if (!preg_match("/<[^<].*>/", $data_value))
+			if (!preg_match("/<[^<].*>/", $data_value) || strtoupper($content_type) == 'TEXT' || strtoupper($content_type) == 'CDATA')
 			{
-				// Create TextNode and append
-				//$documentFragment = $this->CodelessUiDom->createTextNode($data_value); // Encoding entities even though already encoded
-				$documentFragment = $this->CodelessUiDom->createCDATASection($data_value);
+				if (strtoupper($content_type) == 'TEXT')
+				{
+					// Create TextNode and append
+					$documentFragment = $this->CodelessUiDom->createTextNode($data_value); // Encodes entities - even though already encoded
+				}
+				else
+				{
+					// Create CDATA Section and append. CDATA is the default where content has not HTML tags
+					$documentFragment = $this->CodelessUiDom->createCDATASection($data_value);
+				}
 			}
+			
 			else
 			{
 				$documentFragment = $this->CodelessUiDom->createDocumentFragment();
@@ -1077,7 +1125,7 @@ Class CodelessUi
 			// This is a root data
 			$data_stack = $this->data_stack;
 			$source_element = null;
-			$repeat_fn = $this->repeat_fn_y;
+			$repeat_fn = $this->repeat_fn;
 			
 			// Oh, lets include whatever external document fragments that needs to be included in the main template
 			// so that everything is available for processing
@@ -1134,9 +1182,14 @@ Class CodelessUi
 								unset($data_value['@params']);
 							}
 							
+							$repeat_fn = $this->elemGetParam('repeat_fn', $runtime_props, $element);
 							// Determine if this is a repeat on the X or Y axis - for multidimensional array
-							$repeating_axis = $this->repeat_depth_count % 2 == 0 ? "x" : "y";
-							$current_repeat_fn = $this->elemGetParam('repeat_fn_'.$repeating_axis, $runtime_props, $element);
+							if ($this->repeat_depth_count % 2 != 0)
+							{
+								$repeat_fn_y = $this->elemGetParam('repeat_fn_y', $runtime_props, $element);
+							}
+							// Only use $repeat_fn_y where available
+							$current_repeat_fn = !empty($repeat_fn_y) ? $repeat_fn_y : $repeat_fn;
 				
 							// ------------------------------------------------------------------------------------------
 							
@@ -1327,7 +1380,7 @@ Class CodelessUi
 	 *
 	 * @return	string				The specified element if available.
      */
-	public function getRendered($element_selector)
+	public function getRendered($element_selector = null)
 	{
 		if (!$this->is_template_rendered)
 		{
